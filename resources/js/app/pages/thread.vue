@@ -78,7 +78,7 @@
                 type="button"
                 class="btn btn-lg btn-success"
               >
-                Reply
+                Pergjigju
               </button>
 
               <button

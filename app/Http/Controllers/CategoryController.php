@@ -15,12 +15,10 @@ class CategoryController extends Controller
     {
         $cats = Category::with('fora')->get();
 
-        for ($i = 0; $i < count($cats); $i++)
-        {
+        for ($i = 0; $i < count($cats); $i++) {
             $currentCategory = $cats[$i];
 
-            for ($j = 0; $j < count($currentCategory['fora']); $j++)
-            {
+            for ($j = 0; $j < count($currentCategory['fora']); $j++) {
                 $currentForum = $currentCategory['fora'][$j];
 
                 $currentForum['latest'] = Post::leftJoin('threads', 'posts.thread_id', '=', 'threads.id')
@@ -29,13 +27,12 @@ class CategoryController extends Controller
                     ->select('posts.*', 'threads.title as thread_title', 'threads.id as thread_id')
                     ->first();
 
-                $currentForum['latest']['user'] = User::find($currentForum['latest']->user_id);
+                // $currentForum['latest']['user'] = User::find($currentForum['latest']->user_id);
 
                 $currentForum['replies'] = Post::leftJoin('threads', 'posts.thread_id', '=', 'threads.id')
                     ->where('threads.forum_id', '=', $currentForum->id)
                     ->count();
             }
-
         }
 
 
@@ -44,6 +41,4 @@ class CategoryController extends Controller
 
         return response()->json($cats, 200);
     }
-
-
 }

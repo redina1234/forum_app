@@ -1,6 +1,6 @@
 <template>
   <div class="card">
-    <div class="card-header">Active Threads</div>
+    <div class="card-header">Postimet e fundit</div>
     <div class="list-group list-group-flush">
       <router-link
         :to="{ name: 'thread', params: { id: thread.id } }"
@@ -11,7 +11,7 @@
         <strong>{{ thread.title }}</strong>
         <br />
         <small
-          >by {{ thread.latestPost.user.name }} &middot;
+          >nga {{ thread.latestPost.user.name }} &middot;
           {{ thread.latestPost.created_at | friendlyDate }}</small
         >
       </router-link>

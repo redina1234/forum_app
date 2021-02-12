@@ -43,23 +43,6 @@
                       <strong>{{ forum.replies - 1 }}</strong>
                     </span>
                   </div>
-                  <div
-                    style="width: 40%; display: inline-block; padding-top: 15px"
-                  >
-                    <router-link
-                      :to="{
-                        name: 'thread',
-                        params: { id: forum.latest.thread_id },
-                      }"
-                    >
-                      {{ forum.latest.thread_title }}
-                    </router-link>
-                    <br />
-                    <span
-                      >by {{ forum.latest.user.name }} &middot;
-                      {{ forum.latest.created_at | friendlyDate }}</span
-                    >
-                  </div>
                 </li>
               </ul>
             </div>

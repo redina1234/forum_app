@@ -4965,6 +4965,115 @@ module.exports = ret;
 
 /***/ }),
 /* 2 */
+/***/ (function(module, exports) {
+
+/* globals __VUE_SSR_CONTEXT__ */
+
+// IMPORTANT: Do NOT use ES2015 features in this file.
+// This module is a runtime utility for cleaner component module output and will
+// be included in the final webpack user bundle.
+
+module.exports = function normalizeComponent (
+  rawScriptExports,
+  compiledTemplate,
+  functionalTemplate,
+  injectStyles,
+  scopeId,
+  moduleIdentifier /* server only */
+) {
+  var esModule
+  var scriptExports = rawScriptExports = rawScriptExports || {}
+
+  // ES6 modules interop
+  var type = typeof rawScriptExports.default
+  if (type === 'object' || type === 'function') {
+    esModule = rawScriptExports
+    scriptExports = rawScriptExports.default
+  }
+
+  // Vue.extend constructor export interop
+  var options = typeof scriptExports === 'function'
+    ? scriptExports.options
+    : scriptExports
+
+  // render functions
+  if (compiledTemplate) {
+    options.render = compiledTemplate.render
+    options.staticRenderFns = compiledTemplate.staticRenderFns
+    options._compiled = true
+  }
+
+  // functional template
+  if (functionalTemplate) {
+    options.functional = true
+  }
+
+  // scopedId
+  if (scopeId) {
+    options._scopeId = scopeId
+  }
+
+  var hook
+  if (moduleIdentifier) { // server build
+    hook = function (context) {
+      // 2.3 injection
+      context =
+        context || // cached call
+        (this.$vnode && this.$vnode.ssrContext) || // stateful
+        (this.parent && this.parent.$vnode && this.parent.$vnode.ssrContext) // functional
+      // 2.2 with runInNewContext: true
+      if (!context && typeof __VUE_SSR_CONTEXT__ !== 'undefined') {
+        context = __VUE_SSR_CONTEXT__
+      }
+      // inject component styles
+      if (injectStyles) {
+        injectStyles.call(this, context)
+      }
+      // register component module identifier for async chunk inferrence
+      if (context && context._registeredComponents) {
+        context._registeredComponents.add(moduleIdentifier)
+      }
+    }
+    // used by ssr in case component is cached and beforeCreate
+    // never gets called
+    options._ssrRegister = hook
+  } else if (injectStyles) {
+    hook = injectStyles
+  }
+
+  if (hook) {
+    var functional = options.functional
+    var existing = functional
+      ? options.render
+      : options.beforeCreate
+
+    if (!functional) {
+      // inject component registration as beforeCreate hook
+      options.beforeCreate = existing
+        ? [].concat(existing, hook)
+        : [hook]
+    } else {
+      // for template-only hot-reload because in that case the render fn doesn't
+      // go through the normalizer
+      options._injectStyles = hook
+      // register for functioal component in vue file
+      options.render = function renderWithStyleInjection (h, context) {
+        hook.call(context)
+        return existing(h, context)
+      }
+    }
+  }
+
+  return {
+    esModule: esModule,
+    exports: scriptExports,
+    options: options
+  }
+}
+
+
+/***/ }),
+/* 3 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;//     Underscore.js 1.8.3
@@ -6519,7 +6628,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;//     Underscor
 
 
 /***/ }),
-/* 3 */
+/* 4 */
 /***/ (function(module, exports) {
 
 /*
@@ -6597,115 +6706,6 @@ function toComment(sourceMap) {
 	var data = 'sourceMappingURL=data:application/json;charset=utf-8;base64,' + base64;
 
 	return '/*# ' + data + ' */';
-}
-
-
-/***/ }),
-/* 4 */
-/***/ (function(module, exports) {
-
-/* globals __VUE_SSR_CONTEXT__ */
-
-// IMPORTANT: Do NOT use ES2015 features in this file.
-// This module is a runtime utility for cleaner component module output and will
-// be included in the final webpack user bundle.
-
-module.exports = function normalizeComponent (
-  rawScriptExports,
-  compiledTemplate,
-  functionalTemplate,
-  injectStyles,
-  scopeId,
-  moduleIdentifier /* server only */
-) {
-  var esModule
-  var scriptExports = rawScriptExports = rawScriptExports || {}
-
-  // ES6 modules interop
-  var type = typeof rawScriptExports.default
-  if (type === 'object' || type === 'function') {
-    esModule = rawScriptExports
-    scriptExports = rawScriptExports.default
-  }
-
-  // Vue.extend constructor export interop
-  var options = typeof scriptExports === 'function'
-    ? scriptExports.options
-    : scriptExports
-
-  // render functions
-  if (compiledTemplate) {
-    options.render = compiledTemplate.render
-    options.staticRenderFns = compiledTemplate.staticRenderFns
-    options._compiled = true
-  }
-
-  // functional template
-  if (functionalTemplate) {
-    options.functional = true
-  }
-
-  // scopedId
-  if (scopeId) {
-    options._scopeId = scopeId
-  }
-
-  var hook
-  if (moduleIdentifier) { // server build
-    hook = function (context) {
-      // 2.3 injection
-      context =
-        context || // cached call
-        (this.$vnode && this.$vnode.ssrContext) || // stateful
-        (this.parent && this.parent.$vnode && this.parent.$vnode.ssrContext) // functional
-      // 2.2 with runInNewContext: true
-      if (!context && typeof __VUE_SSR_CONTEXT__ !== 'undefined') {
-        context = __VUE_SSR_CONTEXT__
-      }
-      // inject component styles
-      if (injectStyles) {
-        injectStyles.call(this, context)
-      }
-      // register component module identifier for async chunk inferrence
-      if (context && context._registeredComponents) {
-        context._registeredComponents.add(moduleIdentifier)
-      }
-    }
-    // used by ssr in case component is cached and beforeCreate
-    // never gets called
-    options._ssrRegister = hook
-  } else if (injectStyles) {
-    hook = injectStyles
-  }
-
-  if (hook) {
-    var functional = options.functional
-    var existing = functional
-      ? options.render
-      : options.beforeCreate
-
-    if (!functional) {
-      // inject component registration as beforeCreate hook
-      options.beforeCreate = existing
-        ? [].concat(existing, hook)
-        : [hook]
-    } else {
-      // for template-only hot-reload because in that case the render fn doesn't
-      // go through the normalizer
-      options._injectStyles = hook
-      // register for functioal component in vue file
-      options.render = function renderWithStyleInjection (h, context) {
-        hook.call(context)
-        return existing(h, context)
-      }
-    }
-  }
-
-  return {
-    esModule: esModule,
-    exports: scriptExports,
-    options: options
-  }
 }
 
 
@@ -8274,8 +8274,8 @@ exports.isRegExp = function (object) {
 /* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var _ = __webpack_require__(2);
-var bluebird = __webpack_require__(317)();
+var _ = __webpack_require__(3);
+var bluebird = __webpack_require__(316)();
 
 exports.defer = defer;
 exports.when = bluebird.resolve;
@@ -8322,7 +8322,7 @@ function defer() {
 /* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var _ = __webpack_require__(2);
+var _ = __webpack_require__(3);
 
 
 exports.Result = Result;
@@ -10741,7 +10741,7 @@ if (isES5) {
 /* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var _ = __webpack_require__(2);
+var _ = __webpack_require__(3);
 
 var types = exports.types = {
     document: "document",
@@ -12306,7 +12306,7 @@ SafeBuffer.allocUnsafeSlow = function (size) {
 /* 38 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var _ = __webpack_require__(2);
+var _ = __webpack_require__(3);
 
 var html = __webpack_require__(39);
 
@@ -12395,7 +12395,7 @@ exports.elementWithTag = ast.elementWithTag;
 exports.text = ast.text;
 exports.forceWrite = ast.forceWrite;
 
-exports.simplify = __webpack_require__(400);
+exports.simplify = __webpack_require__(399);
 
 function write(writer, nodes) {
     nodes.forEach(function(node) {
@@ -12689,16 +12689,16 @@ exports.decode = function(input, utf8) {
 
 var support = __webpack_require__(21);
 var utils = __webpack_require__(10);
-var crc32 = __webpack_require__(359);
+var crc32 = __webpack_require__(358);
 var signature = __webpack_require__(198);
 var defaults = __webpack_require__(199);
 var base64 = __webpack_require__(42);
 var compressions = __webpack_require__(44);
 var CompressedObject = __webpack_require__(200);
 var nodeBuffer = __webpack_require__(46);
-var utf8 = __webpack_require__(360);
-var StringWriter = __webpack_require__(361);
-var Uint8ArrayWriter = __webpack_require__(362);
+var utf8 = __webpack_require__(359);
+var StringWriter = __webpack_require__(360);
+var Uint8ArrayWriter = __webpack_require__(361);
 
 /**
  * Returns the raw data of a ZipObject, decompress the content if necessary.
@@ -13588,7 +13588,7 @@ exports.STORE = {
     compressInputType: null,
     uncompressInputType: null
 };
-exports.DEFLATE = __webpack_require__(349);
+exports.DEFLATE = __webpack_require__(348);
 
 
 /***/ }),
@@ -13944,7 +13944,7 @@ exports.Readable = exports;
 exports.Writable = __webpack_require__(49);
 exports.Duplex = __webpack_require__(17);
 exports.Transform = __webpack_require__(209);
-exports.PassThrough = __webpack_require__(376);
+exports.PassThrough = __webpack_require__(375);
 
 
 /***/ }),
@@ -14024,7 +14024,7 @@ util.inherits = __webpack_require__(20);
 
 /*<replacement>*/
 var internalUtil = {
-  deprecate: __webpack_require__(375)
+  deprecate: __webpack_require__(374)
 };
 /*</replacement>*/
 
@@ -40496,7 +40496,7 @@ function injectStyle (ssrContext) {
   if (disposed) return
   __webpack_require__(264)
 }
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(2)
 /* script */
 var __vue_script__ = __webpack_require__(266)
 /* template */
@@ -40710,7 +40710,7 @@ module.exports = nodebackForPromise;
 /* 192 */
 /***/ (function(module, exports, __webpack_require__) {
 
-/* WEBPACK VAR INJECTION */(function(Buffer) {var JSZip = __webpack_require__(348);
+/* WEBPACK VAR INJECTION */(function(Buffer) {var JSZip = __webpack_require__(347);
 
 var promises = __webpack_require__(11);
 
@@ -41449,15 +41449,15 @@ var nodes = __webpack_require__(205);
 exports.Element = nodes.Element;
 exports.element = nodes.element;
 exports.text = nodes.text;
-exports.readString = __webpack_require__(369).readString;
-exports.writeString = __webpack_require__(381).writeString;
+exports.readString = __webpack_require__(368).readString;
+exports.writeString = __webpack_require__(380).writeString;
 
 
 /***/ }),
 /* 205 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var _ = __webpack_require__(2);
+var _ = __webpack_require__(3);
 
 
 exports.Element = Element;
@@ -41604,7 +41604,7 @@ util.inherits = __webpack_require__(20);
 /*</replacement>*/
 
 /*<replacement>*/
-var debugUtil = __webpack_require__(372);
+var debugUtil = __webpack_require__(371);
 var debug = void 0;
 if (debugUtil && debugUtil.debuglog) {
   debug = debugUtil.debuglog('stream');
@@ -41613,7 +41613,7 @@ if (debugUtil && debugUtil.debuglog) {
 }
 /*</replacement>*/
 
-var BufferList = __webpack_require__(373);
+var BufferList = __webpack_require__(372);
 var destroyImpl = __webpack_require__(208);
 var StringDecoder;
 
@@ -43233,7 +43233,7 @@ exports.isVoidElement = isVoidElement;
 /* 214 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var _ = __webpack_require__(2);
+var _ = __webpack_require__(3);
 
 var promises = __webpack_require__(11);
 var Html = __webpack_require__(39);
@@ -43793,7 +43793,7 @@ function isPrimitive(arg) {
 }
 exports.isPrimitive = isPrimitive;
 
-exports.isBuffer = __webpack_require__(403);
+exports.isBuffer = __webpack_require__(402);
 
 function objectToString(o) {
   return Object.prototype.toString.call(o);
@@ -43837,7 +43837,7 @@ exports.log = function() {
  *     prototype.
  * @param {function} superCtor Constructor function to inherit prototype from.
  */
-exports.inherits = __webpack_require__(404);
+exports.inherits = __webpack_require__(403);
 
 exports._extend = function(origin, add) {
   // Don't do anything if add isn't an object
@@ -43861,14 +43861,14 @@ function hasOwnProperty(obj, prop) {
 /* 216 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports.Parser = __webpack_require__(407).Parser;
+exports.Parser = __webpack_require__(406).Parser;
 exports.rules = __webpack_require__(217);
 exports.errors = __webpack_require__(218);
 exports.results = __webpack_require__(53);
 exports.StringSource = __webpack_require__(219);
 exports.Token = __webpack_require__(220);
-exports.bottomUp = __webpack_require__(412);
-exports.RegexTokeniser = __webpack_require__(413).RegexTokeniser;
+exports.bottomUp = __webpack_require__(411);
+exports.RegexTokeniser = __webpack_require__(412).RegexTokeniser;
 
 exports.rule = function(ruleBuilder) {
     var rule;
@@ -43885,11 +43885,11 @@ exports.rule = function(ruleBuilder) {
 /* 217 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var _ = __webpack_require__(409);
-var options = __webpack_require__(410);
+var _ = __webpack_require__(408);
+var options = __webpack_require__(409);
 var results = __webpack_require__(53);
 var errors = __webpack_require__(218);
-var lazyIterators = __webpack_require__(411);
+var lazyIterators = __webpack_require__(410);
 
 exports.token = function(tokenType, value) {
     var matchValue = value !== undefined;
@@ -44308,7 +44308,7 @@ module.exports = function(name, value, source) {
 /***/ (function(module, exports, __webpack_require__) {
 
 __webpack_require__(222);
-module.exports = __webpack_require__(445);
+module.exports = __webpack_require__(450);
 
 
 /***/ }),
@@ -44318,12 +44318,12 @@ module.exports = __webpack_require__(445);
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__routes__ = __webpack_require__(248);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_vue_router__ = __webpack_require__(421);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2_vuex__ = __webpack_require__(422);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__store__ = __webpack_require__(423);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4_nprogress_nprogress_css__ = __webpack_require__(424);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_vue_router__ = __webpack_require__(426);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2_vuex__ = __webpack_require__(427);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__store__ = __webpack_require__(428);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4_nprogress_nprogress_css__ = __webpack_require__(429);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_4_nprogress_nprogress_css___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_4_nprogress_nprogress_css__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__plugins_pagination__ = __webpack_require__(427);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__plugins_pagination__ = __webpack_require__(432);
 
 /**
  * First we will load all of this project's JavaScript dependencies which
@@ -44379,7 +44379,7 @@ Spinner
  *
  */
 
-Vue.component('spinner', __webpack_require__(426));
+Vue.component('spinner', __webpack_require__(431));
 
 /*
 Plugins
@@ -44402,7 +44402,7 @@ Vue.use(__WEBPACK_IMPORTED_MODULE_5__plugins_pagination__["a" /* default */]);
 //     return Vue.component(_.last(key.split('/')).split('.')[0], files(key))
 // })
 
-var app = __webpack_require__(433);
+var app = __webpack_require__(438);
 
 /**
  * Next, we will create a fresh Vue application instance and attach it to
@@ -77888,10 +77888,12 @@ module.exports = Vue;
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_10__pages_kerkimi_shkencor___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_10__pages_kerkimi_shkencor__);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_11__pages_document_view__ = __webpack_require__(311);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_11__pages_document_view___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_11__pages_document_view__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_12__pages_njoftimeburse__ = __webpack_require__(447);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_12__pages_njoftimeburse__ = __webpack_require__(420);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_12__pages_njoftimeburse___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_12__pages_njoftimeburse__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_13__pages_perjashtimtarifec1__ = __webpack_require__(449);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_13__pages_perjashtimtarifec1__ = __webpack_require__(422);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_13__pages_perjashtimtarifec1___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_13__pages_perjashtimtarifec1__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_14__pages_reduktimtarifec2__ = __webpack_require__(424);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_14__pages_reduktimtarifec2___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_14__pages_reduktimtarifec2__);
 
 
 
@@ -77903,6 +77905,7 @@ module.exports = Vue;
 
 
  //Bashkpunime karriera mungon ketu
+
 
 
 
@@ -77920,6 +77923,10 @@ var routes = [{ path: "/", component: __WEBPACK_IMPORTED_MODULE_0__pages_categor
     path: "perjashtimtarifec1",
     component: __WEBPACK_IMPORTED_MODULE_13__pages_perjashtimtarifec1___default.a,
     name: "perjashtimtarifec1"
+}, {
+    path: "reduktimtarifec2",
+    component: __WEBPACK_IMPORTED_MODULE_14__pages_reduktimtarifec2___default.a,
+    name: "reduktimtarifec2"
 }, { path: "*", redirect: "/" }];
 
 /* harmony default export */ __webpack_exports__["a"] = (routes);
@@ -77933,7 +77940,7 @@ function injectStyle (ssrContext) {
   if (disposed) return
   __webpack_require__(250)
 }
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(2)
 /* script */
 var __vue_script__ = __webpack_require__(253)
 /* template */
@@ -78005,12 +78012,12 @@ if(false) {
 /* 251 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(3)(false);
+exports = module.exports = __webpack_require__(4)(false);
 // imports
 
 
 // module
-exports.push([module.i, "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n", ""]);
+exports.push([module.i, "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n", ""]);
 
 // exports
 
@@ -78056,23 +78063,6 @@ module.exports = function listToStyles (parentId, list) {
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__components_category_search__ = __webpack_require__(254);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__components_category_search___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__components_category_search__);
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
 //
 //
 //
@@ -78174,7 +78164,7 @@ function injectStyle (ssrContext) {
   if (disposed) return
   __webpack_require__(255)
 }
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(2)
 /* script */
 var __vue_script__ = __webpack_require__(257)
 /* template */
@@ -78246,7 +78236,7 @@ if(false) {
 /* 256 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(3)(false);
+exports = module.exports = __webpack_require__(4)(false);
 // imports
 
 
@@ -78447,57 +78437,6 @@ var render = function() {
                                         ]
                                       )
                                     ]
-                                  ),
-                                  _vm._v(" "),
-                                  _c(
-                                    "div",
-                                    {
-                                      staticStyle: {
-                                        width: "40%",
-                                        display: "inline-block",
-                                        "padding-top": "15px"
-                                      }
-                                    },
-                                    [
-                                      _c(
-                                        "router-link",
-                                        {
-                                          attrs: {
-                                            to: {
-                                              name: "thread",
-                                              params: {
-                                                id: forum.latest.thread_id
-                                              }
-                                            }
-                                          }
-                                        },
-                                        [
-                                          _vm._v(
-                                            "\n                    " +
-                                              _vm._s(
-                                                forum.latest.thread_title
-                                              ) +
-                                              "\n                  "
-                                          )
-                                        ]
-                                      ),
-                                      _vm._v(" "),
-                                      _c("br"),
-                                      _vm._v(" "),
-                                      _c("span", [
-                                        _vm._v(
-                                          "by " +
-                                            _vm._s(forum.latest.user.name) +
-                                            " ·\n                    " +
-                                            _vm._s(
-                                              _vm._f("friendlyDate")(
-                                                forum.latest.created_at
-                                              )
-                                            )
-                                        )
-                                      ])
-                                    ],
-                                    1
                                   )
                                 ]
                               )
@@ -78535,7 +78474,7 @@ function injectStyle (ssrContext) {
   if (disposed) return
   __webpack_require__(261)
 }
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(2)
 /* script */
 var __vue_script__ = __webpack_require__(263)
 /* template */
@@ -78607,7 +78546,7 @@ if(false) {
 /* 262 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(3)(false);
+exports = module.exports = __webpack_require__(4)(false);
 // imports
 
 
@@ -78625,6 +78564,7 @@ exports.push([module.i, "\n.image[data-v-90ca57cc] {\r\n  height: 75px;\n}\r\n",
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__components_active_threads__ = __webpack_require__(185);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__components_active_threads___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__components_active_threads__);
+//
 //
 //
 //
@@ -78825,7 +78765,7 @@ if(false) {
 /* 265 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(3)(false);
+exports = module.exports = __webpack_require__(4)(false);
 // imports
 
 
@@ -78883,7 +78823,7 @@ var render = function() {
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
   return _c("div", { staticClass: "card" }, [
-    _c("div", { staticClass: "card-header" }, [_vm._v("Active Threads")]),
+    _c("div", { staticClass: "card-header" }, [_vm._v("Postimet e fundit")]),
     _vm._v(" "),
     _c(
       "div",
@@ -78903,7 +78843,7 @@ var render = function() {
             _vm._v(" "),
             _c("small", [
               _vm._v(
-                "by " +
+                "nga " +
                   _vm._s(thread.latestPost.user.name) +
                   " ·\n        " +
                   _vm._s(_vm._f("friendlyDate")(thread.latestPost.created_at))
@@ -78992,7 +78932,7 @@ var render = function() {
                               },
                               [
                                 _vm._v(
-                                  "\n              Create Thread\n            "
+                                  "\n              Krijo nje postim te ri\n            "
                                 )
                               ]
                             )
@@ -79054,7 +78994,8 @@ var render = function() {
                                       _vm._v(" "),
                                       _c("span", [
                                         _vm._v(
-                                          "Post by: " + _vm._s(thread.user.name)
+                                          "Postuar nga: " +
+                                            _vm._s(thread.user.name)
                                         )
                                       ]),
                                       _vm._v(" "),
@@ -79062,7 +79003,7 @@ var render = function() {
                                       _vm._v(" "),
                                       _c("span", [
                                         _vm._v(
-                                          "\n                      Latest reply: " +
+                                          "\n                      Pergjigjet me te fundit:\n                      " +
                                             _vm._s(
                                               thread.latestPost.user.name
                                             ) +
@@ -79122,7 +79063,7 @@ var render = function() {
                                               color: "#606f7b"
                                             }
                                           },
-                                          [_vm._v("REPLIES")]
+                                          [_vm._v("Pergjigje")]
                                         )
                                       ]
                                     )
@@ -79180,7 +79121,7 @@ function injectStyle (ssrContext) {
   if (disposed) return
   __webpack_require__(270)
 }
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(2)
 /* script */
 var __vue_script__ = __webpack_require__(272)
 /* template */
@@ -79252,7 +79193,7 @@ if(false) {
 /* 271 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(3)(false);
+exports = module.exports = __webpack_require__(4)(false);
 // imports
 
 
@@ -79534,7 +79475,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* 273 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(3)(false);
+exports = module.exports = __webpack_require__(4)(false);
 // imports
 
 
@@ -79643,7 +79584,7 @@ module.exports = function (css) {
 /* 275 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(3)(false);
+exports = module.exports = __webpack_require__(4)(false);
 // imports
 
 
@@ -79657,7 +79598,7 @@ exports.push([module.i, "/*!\n * Quill Editor v1.3.6\n * https://quilljs.com/\n 
 /* 276 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(3)(false);
+exports = module.exports = __webpack_require__(4)(false);
 // imports
 
 
@@ -91573,7 +91514,7 @@ var render = function() {
                                   },
                                   [
                                     _vm._v(
-                                      "\n              Reply\n            "
+                                      "\n              Pergjigju\n            "
                                     )
                                   ]
                                 )
@@ -91698,7 +91639,7 @@ function injectStyle (ssrContext) {
   if (disposed) return
   __webpack_require__(282)
 }
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(2)
 /* script */
 var __vue_script__ = __webpack_require__(284)
 /* template */
@@ -91770,7 +91711,7 @@ if(false) {
 /* 283 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(3)(false);
+exports = module.exports = __webpack_require__(4)(false);
 // imports
 
 
@@ -92018,7 +91959,7 @@ var render = function() {
                     _vm._v(_vm._s(_vm.app.store.state.currentForum.title))
                   ]),
                   _vm._v(" "),
-                  _c("h5", [_vm._v("Create Thread")])
+                  _c("h5", [_vm._v("Krijo postim")])
                 ])
               ]),
               _vm._v(" "),
@@ -92113,7 +92054,7 @@ var render = function() {
                         staticClass: "btn btn-lg btn-success float-right",
                         staticStyle: { "margin-bottom": "50px" }
                       },
-                      [_vm._v("\n          Create Thread\n        ")]
+                      [_vm._v("\n          Krijo postim te ri\n        ")]
                     )
                   ],
                   1
@@ -92144,7 +92085,7 @@ function injectStyle (ssrContext) {
   if (disposed) return
   __webpack_require__(287)
 }
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(2)
 /* script */
 var __vue_script__ = __webpack_require__(289)
 /* template */
@@ -92216,7 +92157,7 @@ if(false) {
 /* 288 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(3)(false);
+exports = module.exports = __webpack_require__(4)(false);
 // imports
 
 
@@ -92653,7 +92594,7 @@ function injectStyle (ssrContext) {
   if (disposed) return
   __webpack_require__(292)
 }
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(2)
 /* script */
 var __vue_script__ = __webpack_require__(294)
 /* template */
@@ -92725,12 +92666,12 @@ if(false) {
 /* 293 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(3)(false);
+exports = module.exports = __webpack_require__(4)(false);
 // imports
 
 
 // module
-exports.push([module.i, "\n.login[data-v-2c8f933a] {\r\n  border: 1px solid black;\r\n  border-radius: 5px;\r\n  padding: 1.5rem;\r\n  width: 300px;\r\n  margin-left: auto;\r\n  margin-right: auto;\r\n  position: relative;\r\n  overflow: hidden;\n}\nform[data-v-2c8f933a] {\r\n  display: -webkit-box;\r\n  display: -ms-flexbox;\r\n  display: flex;\r\n  -webkit-box-orient: vertical;\r\n  -webkit-box-direction: normal;\r\n      -ms-flex-flow: column;\r\n          flex-flow: column;\n}\n*[data-v-2c8f933a]:not(:last-child) {\r\n  margin-bottom: 1rem;\n}\ninput[data-v-2c8f933a] {\r\n  padding: 0.5rem;\n}\nbutton[data-v-2c8f933a] {\r\n  padding: 0.5rem;\r\n  background-color: lightgray;\r\n  border: 1px solid gray;\r\n  border-radius: 3px;\r\n  cursor: pointer;\n}\n[data-v-2c8f933a]:hover {\r\n  background-color: #42484e;\n}\r\n", ""]);
+exports.push([module.i, "\n.login[data-v-2c8f933a] {\r\n  border: 1px solid black;\r\n  border-radius: 5px;\r\n  padding: 1.5rem;\r\n  width: 300px;\r\n  margin-left: auto;\r\n  margin-right: auto;\r\n  position: relative;\r\n  overflow: hidden;\n}\nform[data-v-2c8f933a] {\r\n  display: -webkit-box;\r\n  display: -ms-flexbox;\r\n  display: flex;\r\n  -webkit-box-orient: vertical;\r\n  -webkit-box-direction: normal;\r\n      -ms-flex-flow: column;\r\n          flex-flow: column;\n}\n*[data-v-2c8f933a]:not(:last-child) {\r\n  margin-bottom: 1rem;\n}\ninput[data-v-2c8f933a] {\r\n  padding: 0.5rem;\n}\nbutton[data-v-2c8f933a] {\r\n  padding: 0.5rem;\r\n  background-color: lightgray;\r\n  border: 1px solid gray;\r\n  border-radius: 3px;\r\n  cursor: pointer;\n}\r\n", ""]);
 
 // exports
 
@@ -92923,7 +92864,7 @@ var render = function() {
     },
     [
       _c("div", { staticClass: "card" }, [
-        _c("div", { staticClass: "card-header" }, [_vm._v("Register")]),
+        _c("div", { staticClass: "card-header" }, [_vm._v("Regjistrohu")]),
         _vm._v(" "),
         _c("div", { staticClass: "row" }, [
           _c("div", { staticClass: "col-md-6 offset-md-3" }, [
@@ -92940,7 +92881,7 @@ var render = function() {
               },
               [
                 _c("div", { staticClass: "form-group" }, [
-                  _c("label", [_vm._v("Name")]),
+                  _c("label", [_vm._v("Emri")]),
                   _vm._v(" "),
                   _c("input", {
                     directives: [
@@ -93085,7 +93026,7 @@ var render = function() {
                     staticClass: "btn btn-secondary",
                     attrs: { disabled: _vm.app.loading, type: "submit" }
                   },
-                  [_vm._v("\n            Register\n          ")]
+                  [_vm._v("\n            Regjistrohu\n          ")]
                 )
               ]
             )
@@ -93114,7 +93055,7 @@ function injectStyle (ssrContext) {
   if (disposed) return
   __webpack_require__(297)
 }
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(2)
 /* script */
 var __vue_script__ = __webpack_require__(299)
 /* template */
@@ -93186,12 +93127,12 @@ if(false) {
 /* 298 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(3)(false);
+exports = module.exports = __webpack_require__(4)(false);
 // imports
 
 
 // module
-exports.push([module.i, "\n.login[data-v-52365b3c] {\r\n  border: 1px solid black;\r\n  border-radius: 5px;\r\n  padding: 1.5rem;\r\n  width: 300px;\r\n  margin-left: auto;\r\n  margin-right: auto;\r\n  position: relative;\r\n  overflow: hidden;\n}\nform[data-v-52365b3c] {\r\n  display: -webkit-box;\r\n  display: -ms-flexbox;\r\n  display: flex;\r\n  -webkit-box-orient: vertical;\r\n  -webkit-box-direction: normal;\r\n      -ms-flex-flow: column;\r\n          flex-flow: column;\n}\n*[data-v-52365b3c]:not(:last-child) {\r\n  margin-bottom: 1rem;\n}\ninput[data-v-52365b3c] {\r\n  padding: 0.5rem;\n}\nbutton[data-v-52365b3c] {\r\n  padding: 0.5rem;\r\n  background-color: lightgray;\r\n  border: 1px solid gray;\r\n  border-radius: 3px;\r\n  cursor: pointer;\n}\n[data-v-52365b3c]:hover {\r\n  background-color: #42484e;\n}\r\n", ""]);
+exports.push([module.i, "\n.login[data-v-52365b3c] {\r\n  border: 1px solid black;\r\n  border-radius: 5px;\r\n  padding: 1.5rem;\r\n  width: 300px;\r\n  margin-left: auto;\r\n  margin-right: auto;\r\n  position: relative;\r\n  overflow: hidden;\n}\nform[data-v-52365b3c] {\r\n  display: -webkit-box;\r\n  display: -ms-flexbox;\r\n  display: flex;\r\n  -webkit-box-orient: vertical;\r\n  -webkit-box-direction: normal;\r\n      -ms-flex-flow: column;\r\n          flex-flow: column;\n}\n*[data-v-52365b3c]:not(:last-child) {\r\n  margin-bottom: 1rem;\n}\ninput[data-v-52365b3c] {\r\n  padding: 0.5rem;\n}\nbutton[data-v-52365b3c] {\r\n  padding: 0.5rem;\r\n  background-color: lightgray;\r\n  border: 1px solid gray;\r\n  border-radius: 3px;\r\n  cursor: pointer;\n}\r\n", ""]);
 
 // exports
 
@@ -93279,7 +93220,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
       var $this = this;
 
       if (!this.email && this.email.length < 6) {
-        this.errorEmail = "Email has to be at least 6 characters long.";
+        this.errorEmail = "Email has to be at least 30 characters long.";
         this.errors.push(this.errorEmail);
       } else {
         this.errorEmail = null;
@@ -93450,7 +93391,7 @@ if (false) {
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(2)
 /* script */
 var __vue_script__ = null
 /* template */
@@ -93502,45 +93443,63 @@ var render = function() {
   var _c = _vm._self._c || _h
   return _c("div", { staticClass: "cointainer" }, [
     _c("div", { staticClass: "container" }, [
-      _c("div", { staticClass: "card-body" }, [
-        _c("h5", { staticClass: "card-title" }, [
-          _vm._v(
-            "\n        KRITERET PËR ULJE TË TARIFËS VJETORE TË STUDIMEVE NË CIKLIN E DYTË,\n        VITI AKADEMIK 2020-2021.\n      "
-          )
-        ]),
-        _vm._v(" "),
-        _vm._m(0),
-        _vm._v(" "),
-        _c("hr"),
-        _vm._v(" "),
-        _c(
-          "div",
-          { staticClass: "card-body" },
-          [
-            _c("h5", { staticClass: "card-title" }, [
-              _vm._v(
-                "\n          KRITERET PËR PËRFITIMIN E PËRJASHTIMIT NGA TARIFA VJETORE E\n          SHKOLLIMIT, BACHELOR - VITI AKADEMIK 2020-2021.\n        "
-              )
-            ]),
-            _vm._v(" "),
-            _c(
-              "router-link",
-              {
-                staticClass: "nav-link",
-                attrs: { to: { name: "perjashtimtarifec1" } }
-              },
-              [
-                _c("strong", [
-                  _vm._v(
-                    "\n            Për dokumentacionin që duhet të dorëzojnë kategoritë e studentëve\n            të Ciklit të Parë të studimeve (BACHELOR) që plotësojnë kriteret\n            për përjashtim nga tarifa vjetore e shkollimit"
-                  )
-                ])
-              ]
+      _c(
+        "div",
+        { staticClass: "card-body" },
+        [
+          _c("h5", { staticClass: "card-title" }, [
+            _vm._v(
+              "\n        KRITERET PËR ULJE TË TARIFËS VJETORE TË STUDIMEVE NË CIKLIN E DYTË,\n        VITI AKADEMIK 2020-2021.\n      "
             )
-          ],
-          1
-        )
-      ]),
+          ]),
+          _vm._v(" "),
+          _c(
+            "router-link",
+            {
+              staticClass: "nav-link",
+              attrs: { to: { name: "reduktimtarifec2" } }
+            },
+            [
+              _c("strong", [
+                _vm._v(
+                  "Për dokumentacionin që duhet të dorëzojnë kategoritë e studentëve\n          të Ciklit të Dytë të studimeve (Master Shkencor dhe Master\n          Profesional) që plotësojnë kriteret për ulje të tarifës vjetore të\n          studimeve."
+                )
+              ])
+            ]
+          ),
+          _vm._v(" "),
+          _c("hr"),
+          _vm._v(" "),
+          _c(
+            "div",
+            { staticClass: "card-body" },
+            [
+              _c("h5", { staticClass: "card-title" }, [
+                _vm._v(
+                  "\n          KRITERET PËR PËRFITIMIN E PËRJASHTIMIT NGA TARIFA VJETORE E\n          SHKOLLIMIT, BACHELOR - VITI AKADEMIK 2020-2021.\n        "
+                )
+              ]),
+              _vm._v(" "),
+              _c(
+                "router-link",
+                {
+                  staticClass: "nav-link",
+                  attrs: { to: { name: "perjashtimtarifec1" } }
+                },
+                [
+                  _c("strong", [
+                    _vm._v(
+                      "\n            Për dokumentacionin që duhet të dorëzojnë kategoritë e studentëve\n            të Ciklit të Parë të studimeve (BACHELOR) që plotësojnë kriteret\n            për përjashtim nga tarifa vjetore e shkollimit"
+                    )
+                  ])
+                ]
+              )
+            ],
+            1
+          )
+        ],
+        1
+      ),
       _vm._v(" "),
       _c("hr"),
       _vm._v(" "),
@@ -93572,10 +93531,14 @@ var render = function() {
           _vm._v(" "),
           _c("hr"),
           _vm._v(" "),
-          _vm._m(1)
+          _vm._m(0)
         ],
         1
       ),
+      _vm._v(" "),
+      _c("hr"),
+      _vm._v(" "),
+      _vm._m(1),
       _vm._v(" "),
       _c("hr"),
       _vm._v(" "),
@@ -93583,35 +93546,11 @@ var render = function() {
       _vm._v(" "),
       _c("hr"),
       _vm._v(" "),
-      _vm._m(3),
-      _vm._v(" "),
-      _c("hr"),
-      _vm._v(" "),
-      _vm._m(4)
+      _vm._m(3)
     ])
   ])
 }
 var staticRenderFns = [
-  function() {
-    var _vm = this
-    var _h = _vm.$createElement
-    var _c = _vm._self._c || _h
-    return _c(
-      "a",
-      {
-        attrs: {
-          href: "../data/news/346/attach/cikli_2_reduktim_tarife_2020_2021.docx"
-        }
-      },
-      [
-        _c("strong", [
-          _vm._v(
-            "Për dokumentacionin që duhet të dorëzojnë kategoritë e studentëve\n          të Ciklit të Dytë të studimeve (Master Shkencor dhe Master\n          Profesional) që plotësojnë kriteret për ulje të tarifës vjetore të\n          studimeve."
-          )
-        ])
-      ]
-    )
-  },
   function() {
     var _vm = this
     var _h = _vm.$createElement
@@ -93713,7 +93652,7 @@ if (false) {
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(2)
 /* script */
 var __vue_script__ = null
 /* template */
@@ -93775,14 +93714,14 @@ var staticRenderFns = [
         _c("h6", { staticClass: "card-title" }, [
           _c("b", [
             _vm._v(
-              "PLANI MESIMOR I CIKLIT TE PARE TE STUDIMEVE UNIVERSITARE BACHELOR\n            NE INXHINIERI TELEKOMUNIKACIONI (DET/FTI/UPT)\n\n            "
+              "PLANI MESIMOR I CIKLIT TE PARE TE STUDIMEVE UNIVERSITARE BACHELOR NE\n        INXHINIERI TELEKOMUNIKACIONI (DET/FTI/UPT)\n\n        "
             ),
             _c("br"),
             _vm._v(
-              "\n\n            (I vlefshëm për studentët që rregjistrohen në vitin e parë, në vitin\n            akademik 2019 -2020)\n\n            "
+              "\n\n        (I vlefshëm për studentët që rregjistrohen në vitin e parë, në vitin\n        akademik 2019 -2020)\n\n        "
             ),
             _c("br"),
-            _vm._v("\n\n            Kohëzgjatja: 3 Vjet, 180 Kredite")
+            _vm._v("\n\n        Kohëzgjatja: 3 Vjet, 180 Kredite")
           ]),
           _vm._v(" "),
           _c("br")
@@ -93791,7 +93730,7 @@ var staticRenderFns = [
         _c("p", [
           _c("i", [
             _vm._v(
-              "Pak histori…\n\n \n\nDepartamenti i Elektronikës dhe Telekomunikacionit është vazhdim i ish Departamentit të Elektronikës i cili fillimet e tij i ka tek specialiteti “Rrymat e Dobëta” i hapur në shtator 1961, pranë degës Elektrike të Fakultetit të Inxhinierisë në Universitetin Shtetëror të Tiranës.\n\n \n\nNë vitin 1969, me ndryshimin e planeve mësimore u ndryshua edhe emri i katedrës nga “Rryma të Dobëta” në “Radioelektronikë”  dhe u krijua edhe dega me të njëjtin emër: Radioelektronikë.\n\n \n\nNë vitin 1974 u krijuan dy katedra të degës Elektronikë: Katedra e Elektronikës së Përgjithshme dhe Katedra e Elektronikës së Aplikuar.\n\nNë vitin 1977 u bë bashkimi i dy katedrave të degës Elektronikë në një të vetme: Katedra e Elektronikës.\n\n \n\nNë vitin 1989 u krijuan përsëri dy katedra të degës Elektronikë: Katedra e Elektronikës së Përgjithshme dhe Katedra e Elektronikës Numerike.\n\n \n\nDepartamenti i Elektronikës ishte një nga dy departamentet e Fakultetit të Inxhinierisë Elektrike të Universitetit Politeknik, krijuar me VKM nr. 359 dt. 21.09.1991, “Për organizimin e disa fakulteteve, universiteteve”.\n\n \n\nDepartamenti i Elektronikës në vitin 1994 krijoi 5 seksione: Seksioni i bazave të elektronikës; Seksioni i elektronikës industriale; Seksioni i telekomunikacionit; Seksioni i automatikës; Seksioni i inxhinierisë së kompjuterave.\n\n \n\nNë vitin 1999 u krye riorganizimi i Departamenteve dhe seksioneve dhe Departamenti i Elektronikës përbëhej nga 4 seksione: Seksioni i bazave të elektronikës; Seksioni i telekomunikacionit; Seksioni i automatikës; Seksioni i inxhinierisë së kompjuterave.\n\n \n\nNë vitin 2002 në Departamentin e Elektronikës filloi zbatimi i sistemit 3 + 2 me diplomat:\n\nInxhinieri elektronike;\n\nInxhinieri Informatike;\n\nInxhinieri Telekomunikacioni;\n\n \n\nNë vitin akademik 2005-2006 hapet për herë të parë diploma e nivelit të dytë DND (sot Master i Shkencave) në drejtimet e Inxhinierisë Elektronike, Inxhinierisë Telekomunikacion dhe Inxhinierisë Informatike, sipas VKM Nr. 768, datë 16.11.2006 “Për hapjen e ciklit të dytë të studimeve Master, pranë Fakultetit të Inxhinierisë Elektrike, të Universitetit Politeknik të Tiranës”.\n\n \n\nNë dhjetor 2007, u krijua Fakulteti i Teknologjisë së Informacionit, bazuar në VKM Nr. 824, datë 05.12.2007 për “Krijimin e disa njësive kryesore, fakulteteve, në Universitetin Politeknik të Tiranës”, mbi bazën e tre departamenteve:\n\n1-Departamenti i Elektronikës dhe Telekomunikacionit (nga bashkimi i seksioneve të Elektronikës dhe të Telekomunikacionit).\n\n2- Departamenti i Inxhinierisë Informatike (në përbërje të të cilit  është edhe seksioni i informatikës ish pjesë e Departamentit të Matematikës).\n\n3- Qëndra për kërkim dhe zhvillim të teknologjisë së informacionit, (INIMA)."
+              "Pak histori… Departamenti i Elektronikës dhe Telekomunikacionit është\n        vazhdim i ish Departamentit të Elektronikës i cili fillimet e tij i ka\n        tek specialiteti “Rrymat e Dobëta” i hapur në shtator 1961, pranë\n        degës Elektrike të Fakultetit të Inxhinierisë në Universitetin\n        Shtetëror të Tiranës. Në vitin 1969, me ndryshimin e planeve mësimore\n        u ndryshua edhe emri i katedrës nga “Rryma të Dobëta” në\n        “Radioelektronikë” dhe u krijua edhe dega me të njëjtin emër:\n        Radioelektronikë. Në vitin 1974 u krijuan dy katedra të degës\n        Elektronikë: Katedra e Elektronikës së Përgjithshme dhe Katedra e\n        Elektronikës së Aplikuar. Në vitin 1977 u bë bashkimi i dy katedrave\n        të degës Elektronikë në një të vetme: Katedra e Elektronikës. Në vitin\n        1989 u krijuan përsëri dy katedra të degës Elektronikë: Katedra e\n        Elektronikës së Përgjithshme dhe Katedra e Elektronikës Numerike.\n        Departamenti i Elektronikës ishte një nga dy departamentet e\n        Fakultetit të Inxhinierisë Elektrike të Universitetit Politeknik,\n        krijuar me VKM nr. 359 dt. 21.09.1991, “Për organizimin e disa\n        fakulteteve, universiteteve”. Departamenti i Elektronikës në vitin\n        1994 krijoi 5 seksione: Seksioni i bazave të elektronikës; Seksioni i\n        elektronikës industriale; Seksioni i telekomunikacionit; Seksioni i\n        automatikës; Seksioni i inxhinierisë së kompjuterave. Në vitin 1999 u\n        krye riorganizimi i Departamenteve dhe seksioneve dhe Departamenti i\n        Elektronikës përbëhej nga 4 seksione: Seksioni i bazave të\n        elektronikës; Seksioni i telekomunikacionit; Seksioni i automatikës;\n        Seksioni i inxhinierisë së kompjuterave. Në vitin 2002 në\n        Departamentin e Elektronikës filloi zbatimi i sistemit 3 + 2 me\n        diplomat: Inxhinieri elektronike; Inxhinieri Informatike; Inxhinieri\n        Telekomunikacioni; Në vitin akademik 2005-2006 hapet për herë të parë\n        diploma e nivelit të dytë DND (sot Master i Shkencave) në drejtimet e\n        Inxhinierisë Elektronike, Inxhinierisë Telekomunikacion dhe\n        Inxhinierisë Informatike, sipas VKM Nr. 768, datë 16.11.2006 “Për\n        hapjen e ciklit të dytë të studimeve Master, pranë Fakultetit të\n        Inxhinierisë Elektrike, të Universitetit Politeknik të Tiranës”. Në\n        dhjetor 2007, u krijua Fakulteti i Teknologjisë së Informacionit,\n        bazuar në VKM Nr. 824, datë 05.12.2007 për “Krijimin e disa njësive\n        kryesore, fakulteteve, në Universitetin Politeknik të Tiranës”, mbi\n        bazën e tre departamenteve: 1-Departamenti i Elektronikës dhe\n        Telekomunikacionit (nga bashkimi i seksioneve të Elektronikës dhe të\n        Telekomunikacionit). 2- Departamenti i Inxhinierisë Informatike (në\n        përbërje të të cilit është edhe seksioni i informatikës ish pjesë e\n        Departamentit të Matematikës). 3- Qëndra për kërkim dhe zhvillim të\n        teknologjisë së informacionit, (INIMA)."
             )
           ])
         ])
@@ -93819,11 +93758,7 @@ var staticRenderFns = [
                         "aria-controls": "collapseOne"
                       }
                     },
-                    [
-                      _vm._v(
-                        "\n                VITI I PARE-60 kredite\n              "
-                      )
-                    ]
+                    [_vm._v("\n            VITI I PARE-60 kredite\n          ")]
                   )
                 ])
               ]
@@ -93843,21 +93778,17 @@ var staticRenderFns = [
                 _c("div", { staticClass: "card-body" }, [
                   _c("b", [_c("i", [_vm._v("Semestri i I-rë:")])]),
                   _c("br"),
-                  _vm._v("\n\n              Gjuhe e Huaj 1 ... 5 Kredite"),
+                  _vm._v("\n\n          Gjuhe e Huaj 1 ... 5 Kredite"),
                   _c("br"),
-                  _vm._v("\n              Analizë Matematike 1 ... 6 Kredite "),
+                  _vm._v("\n          Analizë Matematike 1 ... 6 Kredite "),
                   _c("br"),
                   _vm._v("Fizikë 1 ... 5 Kredite"),
                   _c("br"),
-                  _vm._v(
-                    "\n              Elementet e Informatikës... 6 Kredite "
-                  ),
+                  _vm._v("\n          Elementet e Informatikës... 6 Kredite "),
                   _c("br"),
-                  _vm._v("Algjebër dhe\n              Gjeometri... 6 Kredite"),
+                  _vm._v("Algjebër dhe\n          Gjeometri... 6 Kredite"),
                   _c("br"),
-                  _vm._v(
-                    "\n              Komunikimi Inxhinierik ... 4 Kredite"
-                  ),
+                  _vm._v("\n          Komunikimi Inxhinierik ... 4 Kredite"),
                   _c("br"),
                   _vm._v(" "),
                   _c("br"),
@@ -93866,20 +93797,20 @@ var staticRenderFns = [
                   _vm._v(" "),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Analizë Matematike 2... 6 Kredite\n              "
+                    "\n\n          Analizë Matematike 2... 6 Kredite\n          "
                   ),
                   _c("br"),
-                  _vm._v("\n\n              Fizikë 2... 5 Kredite"),
+                  _vm._v("\n\n          Fizikë 2... 5 Kredite"),
                   _c("br"),
-                  _vm._v("\n\n              Elektroteknikë 1... 5 Kredite"),
+                  _vm._v("\n\n          Elektroteknikë 1... 5 Kredite"),
                   _c("br"),
-                  _vm._v("\n\n              Analizë matematike 3... 3 Kredite"),
+                  _vm._v("\n\n          Analizë matematike 3... 3 Kredite"),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Teknikat dhe gjuhët e programimit... 6 Kredite\n              "
+                    "\n\n          Teknikat dhe gjuhët e programimit... 6 Kredite\n          "
                   ),
                   _c("br"),
-                  _vm._v("\n\n              Probabiliteti ... 3 Kredite "),
+                  _vm._v("\n\n          Probabiliteti ... 3 Kredite "),
                   _c("br")
                 ])
               ]
@@ -93904,11 +93835,7 @@ var staticRenderFns = [
                         "aria-controls": "collapseTwo"
                       }
                     },
-                    [
-                      _vm._v(
-                        "\n                VITI I DYTE-60 kredite\n              "
-                      )
-                    ]
+                    [_vm._v("\n            VITI I DYTE-60 kredite\n          ")]
                   )
                 ])
               ]
@@ -93930,27 +93857,25 @@ var staticRenderFns = [
                   _vm._v(" "),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Analizë numerike... 3 Kredite\n\n              "
+                    "\n\n          Analizë numerike... 3 Kredite\n\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n              Elektroteknikë 2... 6 Kredite\n              "
+                    "\n          Elektroteknikë 2... 6 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Teoria e sinjaleve... 6 Kredite\n\n              "
+                    "\n\n          Teoria e sinjaleve... 6 Kredite\n\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n              Matje elektronike ... 5 Kredite\n\n              "
+                    "\n          Matje elektronike ... 5 Kredite\n\n          "
                   ),
                   _c("br"),
-                  _vm._v(
-                    "\n              Automatizim ... 5 Kredite\n\n              "
-                  ),
+                  _vm._v("\n          Automatizim ... 5 Kredite\n\n          "),
                   _c("br"),
                   _vm._v(
-                    "\n              Elementet dhe teknologjitë elektronike ... 6 Kredite"
+                    "\n          Elementet dhe teknologjitë elektronike ... 6 Kredite"
                   ),
                   _c("br"),
                   _vm._v(" "),
@@ -93960,23 +93885,23 @@ var staticRenderFns = [
                   _vm._v(" "),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Sistemet elektronike ... 6 Kredite\n\n              "
+                    "\n\n          Sistemet elektronike ... 6 Kredite\n\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n              Përpunimi numerik i sinjaleve ... 6 Kredite\n              "
+                    "\n          Përpunimi numerik i sinjaleve ... 6 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Bazat e telekomunikacioneve ... 6 Kredite\n              "
+                    "\n\n          Bazat e telekomunikacioneve ... 6 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Algoritëm dhe programim i avancuar... 6 Kredite\n\n              "
+                    "\n\n          Algoritëm dhe programim i avancuar... 6 Kredite\n\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n              Teoria e fushës elektromagnetike... 5 Kredite\n            "
+                    "\n          Teoria e fushës elektromagnetike... 5 Kredite\n        "
                   )
                 ])
               ]
@@ -94003,7 +93928,7 @@ var staticRenderFns = [
                     },
                     [
                       _vm._v(
-                        "\n                VITI I TRETE-60 kredite\n              "
+                        "\n            VITI I TRETE-60 kredite\n          "
                       )
                     ]
                   )
@@ -94027,23 +93952,23 @@ var staticRenderFns = [
                   _vm._v(" "),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Sistemet në radiofrekuencë 1... 6 Kredite\n              "
+                    "\n\n          Sistemet në radiofrekuencë 1... 6 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Sistemet e telekomunikacioneve .. 6 Kredite\n              "
+                    "\n\n          Sistemet e telekomunikacioneve .. 6 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Rrjetat e transmetimit të të dhënave ... 6 Kredite\n              "
+                    "\n\n          Rrjetat e transmetimit të të dhënave ... 6 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Arkitekturë e kompjuterave... 6 Kredite\n              "
+                    "\n\n          Arkitekturë e kompjuterave... 6 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Transmetim Numerik... 6 Kredite\n\n              "
+                    "\n\n          Transmetim Numerik... 6 Kredite\n\n          "
                   ),
                   _c("br"),
                   _vm._v(" "),
@@ -94053,27 +93978,27 @@ var staticRenderFns = [
                   _vm._v(" "),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Rrjetat me fibra optike... 6 Kredite\n              "
+                    "\n\n          Rrjetat me fibra optike... 6 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Lëndë me zgjedhje (Formim Elektronik/Informatik) ... 6 Kredite\n              "
+                    "\n\n          Lëndë me zgjedhje (Formim Elektronik/Informatik) ... 6 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Lëndë me zgjedhje (Formim i Përgjithshëm) ... 5 Kredite\n              "
+                    "\n\n          Lëndë me zgjedhje (Formim i Përgjithshëm) ... 5 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Lëndë me zgjedhje (Formim i Përgjithshëm) ... 3 Kredite\n\n              "
+                    "\n\n          Lëndë me zgjedhje (Formim i Përgjithshëm) ... 3 Kredite\n\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Praktikë (programi) ... 4 Kredite\n\n              "
+                    "\n\n          Praktikë (programi) ... 4 Kredite\n\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Diplomë (programi) ... 6 Kredite\n            "
+                    "\n\n          Diplomë (programi) ... 6 Kredite\n        "
                   )
                 ])
               ]
@@ -94092,14 +94017,14 @@ var staticRenderFns = [
           _c("h6", { staticClass: "card-title" }, [
             _c("b", [
               _vm._v(
-                "PLANI MESIMOR I CIKLIT TE PARE TE STUDIMEVE UNIVERSITARE BACHELOR NE\n          INXHINIERI ELEKTRONIKE (DET/FTI/UPT)\n\n          "
+                "PLANI MESIMOR I CIKLIT TE PARE TE STUDIMEVE UNIVERSITARE BACHELOR NE\n        INXHINIERI ELEKTRONIKE (DET/FTI/UPT)\n\n        "
               ),
               _c("br"),
               _vm._v(
-                "\n\n          (I vlefshëm për studentët që rregjistrohen në vitin e parë, në vitin\n          akademik 2019 -2020)\n\n          "
+                "\n\n        (I vlefshëm për studentët që rregjistrohen në vitin e parë, në vitin\n        akademik 2019 -2020)\n\n        "
               ),
               _c("br"),
-              _vm._v("\n\n          Kohëzgjatja: 3 Vjet, 180 Kredite")
+              _vm._v("\n\n        Kohëzgjatja: 3 Vjet, 180 Kredite")
             ]),
             _vm._v(" "),
             _c("br")
@@ -94129,11 +94054,7 @@ var staticRenderFns = [
                         "aria-controls": "collapseOne"
                       }
                     },
-                    [
-                      _vm._v(
-                        "\n              VITI I PARE-60 kredite\n            "
-                      )
-                    ]
+                    [_vm._v("\n            VITI I PARE-60 kredite\n          ")]
                   )
                 ])
               ]
@@ -94153,19 +94074,17 @@ var staticRenderFns = [
                 _c("div", { staticClass: "card-body" }, [
                   _c("b", [_c("i", [_vm._v("Semestri i I-rë:")])]),
                   _c("br"),
-                  _vm._v("\n\n            Gjuhe e Huaj 1 ... 5 Kredite"),
+                  _vm._v("\n\n          Gjuhe e Huaj 1 ... 5 Kredite"),
                   _c("br"),
-                  _vm._v("\n            Analizë Matematike 1 ... 6 Kredite "),
+                  _vm._v("\n          Analizë Matematike 1 ... 6 Kredite "),
                   _c("br"),
                   _vm._v("Fizikë 1 ... 5 Kredite"),
                   _c("br"),
-                  _vm._v(
-                    "\n            Elementet e Informatikës... 6 Kredite "
-                  ),
+                  _vm._v("\n          Elementet e Informatikës... 6 Kredite "),
                   _c("br"),
-                  _vm._v("Algjebër dhe\n            Gjeometri... 6 Kredite"),
+                  _vm._v("Algjebër dhe\n          Gjeometri... 6 Kredite"),
                   _c("br"),
-                  _vm._v("\n            Komunikimi Inxhinierik ... 4 Kredite"),
+                  _vm._v("\n          Komunikimi Inxhinierik ... 4 Kredite"),
                   _c("br"),
                   _vm._v(" "),
                   _c("br"),
@@ -94174,20 +94093,20 @@ var staticRenderFns = [
                   _vm._v(" "),
                   _c("br"),
                   _vm._v(
-                    "\n\n            Analizë Matematike 2... 6 Kredite\n            "
+                    "\n\n          Analizë Matematike 2... 6 Kredite\n          "
                   ),
                   _c("br"),
-                  _vm._v("\n\n            Fizikë 2... 5 Kredite"),
+                  _vm._v("\n\n          Fizikë 2... 5 Kredite"),
                   _c("br"),
-                  _vm._v("\n\n            Elektroteknikë 1... 5 Kredite"),
+                  _vm._v("\n\n          Elektroteknikë 1... 5 Kredite"),
                   _c("br"),
-                  _vm._v("\n\n            Analizë matematike 3... 3 Kredite"),
+                  _vm._v("\n\n          Analizë matematike 3... 3 Kredite"),
                   _c("br"),
                   _vm._v(
-                    "\n\n            Teknikat dhe gjuhët e programimit... 6 Kredite\n            "
+                    "\n\n          Teknikat dhe gjuhët e programimit... 6 Kredite\n          "
                   ),
                   _c("br"),
-                  _vm._v("\n\n            Probabiliteti ... 3 Kredite "),
+                  _vm._v("\n\n          Probabiliteti ... 3 Kredite "),
                   _c("br")
                 ])
               ]
@@ -94212,11 +94131,7 @@ var staticRenderFns = [
                         "aria-controls": "collapseTwo"
                       }
                     },
-                    [
-                      _vm._v(
-                        "\n              VITI I DYTE-60 kredite\n            "
-                      )
-                    ]
+                    [_vm._v("\n            VITI I DYTE-60 kredite\n          ")]
                   )
                 ])
               ]
@@ -94238,27 +94153,25 @@ var staticRenderFns = [
                   _vm._v(" "),
                   _c("br"),
                   _vm._v(
-                    "\n\n            Analizë numerike... 3 Kredite\n\n            "
+                    "\n\n          Analizë numerike... 3 Kredite\n\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n            Elektroteknikë 2... 6 Kredite\n            "
+                    "\n          Elektroteknikë 2... 6 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n            Teoria e sinjaleve... 6 Kredite\n\n            "
+                    "\n\n          Teoria e sinjaleve... 6 Kredite\n\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n            Matje elektronike ... 5 Kredite\n\n            "
+                    "\n          Matje elektronike ... 5 Kredite\n\n          "
                   ),
                   _c("br"),
-                  _vm._v(
-                    "\n            Automatizim ... 5 Kredite\n\n            "
-                  ),
+                  _vm._v("\n          Automatizim ... 5 Kredite\n\n          "),
                   _c("br"),
                   _vm._v(
-                    "\n            Elementet dhe teknologjitë elektronike ... 6 Kredite"
+                    "\n          Elementet dhe teknologjitë elektronike ... 6 Kredite"
                   ),
                   _c("br"),
                   _vm._v(" "),
@@ -94268,23 +94181,23 @@ var staticRenderFns = [
                   _vm._v(" "),
                   _c("br"),
                   _vm._v(
-                    "\n\n            Sistemet elektronike ... 6 Kredite\n\n            "
+                    "\n\n          Sistemet elektronike ... 6 Kredite\n\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n            Përpunimi numerik i sinjaleve ... 6 Kredite\n            "
+                    "\n          Përpunimi numerik i sinjaleve ... 6 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n            Bazat e telekomunikacioneve ... 6 Kredite\n            "
+                    "\n\n          Bazat e telekomunikacioneve ... 6 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n            Algoritëm dhe programim i avancuar... 6 Kredite\n\n            "
+                    "\n\n          Algoritëm dhe programim i avancuar... 6 Kredite\n\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n            Arkitekturë e kompjuterave ... 6 Kredite\n          "
+                    "\n          Arkitekturë e kompjuterave ... 6 Kredite\n        "
                   )
                 ])
               ]
@@ -94311,7 +94224,7 @@ var staticRenderFns = [
                     },
                     [
                       _vm._v(
-                        "\n              VITI I TRETE-60 kredite\n            "
+                        "\n            VITI I TRETE-60 kredite\n          "
                       )
                     ]
                   )
@@ -94335,23 +94248,23 @@ var staticRenderFns = [
                   _vm._v(" "),
                   _c("br"),
                   _vm._v(
-                    "\n\n            Elektronikë Fuqie... 6 Kredite\n            "
+                    "\n\n          Elektronikë Fuqie... 6 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n            Elektronikë Analoge... 6 Kredite\n            "
+                    "\n\n          Elektronikë Analoge... 6 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n            Rrjetat e transmetimit të të dhënave... 6 Kredite  "
+                    "\n\n          Rrjetat e transmetimit të të dhënave... 6 Kredite "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\nLëndë me zgjedhje\n            (Formim Elektronik/Informatik) ... 6 Kredite  "
+                    "\n          Lëndë me zgjedhje (Formim Elektronik/Informatik) ... 6 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\nElektronika e sistemeve\n            të programueshme... 6 Kredite "
+                    "\n          Elektronika e sistemeve të programueshme... 6 Kredite "
                   ),
                   _c("br"),
                   _vm._v(" "),
@@ -94359,22 +94272,22 @@ var staticRenderFns = [
                   _vm._v(" "),
                   _c("b", [_c("i", [_vm._v(" Semestri i II-të")])]),
                   _vm._v(
-                    "\n            Sensorët dhe shndëruesit 1... 6 Kredite "
+                    "\n          Sensorët dhe shndëruesit 1... 6 Kredite "
                   ),
+                  _c("br"),
+                  _vm._v("\n\n          Elektronika për telekom... 6 Kredite "),
+                  _c("br"),
+                  _vm._v("\n          Lëndë me zgjedhje ... 5 Kredite "),
                   _c("br"),
                   _vm._v(
-                    "\n\n            Elektronika për telekom... 6 Kredite "
+                    "\n          Lëndë me zgjedhje (Formim i Përgjithshëm) ... 3 Kredite "
                   ),
                   _c("br"),
-                  _vm._v("\n Lëndë me zgjedhje ... 5 Kredite  "),
+                  _vm._v("\n          Praktikë (programi) ... 4 Kredite "),
                   _c("br"),
                   _vm._v(
-                    "\nLëndë me zgjedhje\n            (Formim i Përgjithshëm) ... 3 Kredite  "
-                  ),
-                  _c("br"),
-                  _vm._v("\nPraktikë (programi) ... 4\n            Kredite "),
-                  _c("br"),
-                  _vm._v("\n Diplomë (programi) ... 6 Kredite\n    ")
+                    "\n          Diplomë (programi) ... 6 Kredite\n        "
+                  )
                 ])
               ]
             )
@@ -94395,21 +94308,22 @@ var staticRenderFns = [
         _c("h6", { staticClass: "card-title" }, [
           _c("b", [
             _vm._v(
-              "PLANI MESIMOR I CIKLIT TE PARE TE STUDIMEVE UNIVERSITARE BACHELOR\n            NE INXHINIERI INFORMATIKE (DET/FTI/UPT)\n\n            "
+              "PLANI MESIMOR I CIKLIT TE PARE TE STUDIMEVE UNIVERSITARE BACHELOR NE\n        INXHINIERI INFORMATIKE (DET/FTI/UPT)\n\n        "
             ),
             _c("br"),
             _vm._v(
-              "\n\n            (I vlefshëm për studentët që rregjistrohen në vitin e parë, në vitin\n            akademik 2019 -2020)\n\n            "
+              "\n\n        (I vlefshëm për studentët që rregjistrohen në vitin e parë, në vitin\n        akademik 2019 -2020)\n\n        "
             ),
             _c("br"),
-            _vm._v("\n\n            Kohëzgjatja: 3 Vjet, 180 Kredite")
+            _vm._v("\n\n        Kohëzgjatja: 3 Vjet, 180 Kredite")
           ]),
           _vm._v(" "),
           _c("br")
         ]),
+        _vm._v(" "),
         _c("i", [
           _vm._v(
-            "Departamenti i Inxhinierisë Informatike është vazhdimi i Seksionit të Inxhinierisë së Kompjuterave i Departamentit të Elektronikës. Departamenti ofron edukimin universitar dhe pas universitar, si dhe kërkim-zhvillim në fushat e inxhinierisë së softit, programimit të orientuar nga objekti,arkitekturës së kompjuterave, projektim i sistemeve shifrore, sistemet e shfrytëzimit, sistemet e shpërndare dhe grid, teknologjitë e rrjetave dhe bazave të të dhënave.\n\n \n\nMisioni i Departamentit te Inxhinierise Informatike , si njësi bazë e FTI, bazuar edhe në Statutin e Universitetit Politeknik të Tiranës, është:\n\n• të krijojë, të transmetojë, të zhvillojë e të mbrojë dijet me anën e mësimdhënies, kërkimit shkencor dhe shërbimeve si dhe të formojë specialistë të lartë dhe të përgatisë shkencëtarë të rinj të fushave të Inxhinierise Informatike  bazuar në programe mësimore bashkëkohore, të kualifikuar dhe të përshtatshëm për tregun e punës në Shqipëri dhe në vende të tjera perëndimore.\n\n• Garantimi i cilësisë dhe plotësimi i standardeve akademike për të gjitha programet e studimit në të tre ciklet.\n\n• Nxitja, mbështetja dhe zhvillimi i aktivitetit shkencor të pedagogëve dhe studentëve, veçanërisht atyre diplomantë.\n\n• të ofrojë mundësi për të përfituar nga arsimi i lartë gjatë gjithë jetës;\n\n• të bashkëpunojë me industrinë për identifikimin e kërkesës për burime inxhinierike dhe përshtatjen e programeve mësimore në funksion të saj.\n\n• të kontribuojë në aftësimin praktik të studentëve dhe veçanërisht të të diplomuarve.\n\n \n\nObjektivat e Departamentit të Inxhinierise Informatike  lidhen me objektivat dhe veprimtaritë formuese të programeve në të tre ciklet e studimit, Bachelor, Master Profesional, Master i Shkencave dhe Studime Doktorature."
+            "Departamenti i Inxhinierisë Informatike është vazhdimi i Seksionit të\n      Inxhinierisë së Kompjuterave i Departamentit të Elektronikës.\n      Departamenti ofron edukimin universitar dhe pas universitar, si dhe\n      kërkim-zhvillim në fushat e inxhinierisë së softit, programimit të\n      orientuar nga objekti,arkitekturës së kompjuterave, projektim i\n      sistemeve shifrore, sistemet e shfrytëzimit, sistemet e shpërndare dhe\n      grid, teknologjitë e rrjetave dhe bazave të të dhënave. Misioni i\n      Departamentit te Inxhinierise Informatike , si njësi bazë e FTI, bazuar\n      edhe në Statutin e Universitetit Politeknik të Tiranës, është: • të\n      krijojë, të transmetojë, të zhvillojë e të mbrojë dijet me anën e\n      mësimdhënies, kërkimit shkencor dhe shërbimeve si dhe të formojë\n      specialistë të lartë dhe të përgatisë shkencëtarë të rinj të fushave të\n      Inxhinierise Informatike bazuar në programe mësimore bashkëkohore, të\n      kualifikuar dhe të përshtatshëm për tregun e punës në Shqipëri dhe në\n      vende të tjera perëndimore. • Garantimi i cilësisë dhe plotësimi i\n      standardeve akademike për të gjitha programet e studimit në të tre\n      ciklet. • Nxitja, mbështetja dhe zhvillimi i aktivitetit shkencor të\n      pedagogëve dhe studentëve, veçanërisht atyre diplomantë. • të ofrojë\n      mundësi për të përfituar nga arsimi i lartë gjatë gjithë jetës; • të\n      bashkëpunojë me industrinë për identifikimin e kërkesës për burime\n      inxhinierike dhe përshtatjen e programeve mësimore në funksion të saj. •\n      të kontribuojë në aftësimin praktik të studentëve dhe veçanërisht të të\n      diplomuarve. Objektivat e Departamentit të Inxhinierise Informatike\n      lidhen me objektivat dhe veprimtaritë formuese të programeve në të tre\n      ciklet e studimit, Bachelor, Master Profesional, Master i Shkencave dhe\n      Studime Doktorature."
           )
         ])
       ]),
@@ -94436,11 +94350,7 @@ var staticRenderFns = [
                         "aria-controls": "collapseOne"
                       }
                     },
-                    [
-                      _vm._v(
-                        "\n                VITI I PARE-60 kredite\n              "
-                      )
-                    ]
+                    [_vm._v("\n            VITI I PARE-60 kredite\n          ")]
                   )
                 ])
               ]
@@ -94460,21 +94370,17 @@ var staticRenderFns = [
                 _c("div", { staticClass: "card-body" }, [
                   _c("b", [_c("i", [_vm._v("Semestri i I-rë:")])]),
                   _c("br"),
-                  _vm._v("\n\n              Gjuhe e Huaj 1 ... 5 Kredite"),
+                  _vm._v("\n\n          Gjuhe e Huaj 1 ... 5 Kredite"),
                   _c("br"),
-                  _vm._v("\n              Analizë Matematike 1 ... 6 Kredite "),
+                  _vm._v("\n          Analizë Matematike 1 ... 6 Kredite "),
                   _c("br"),
                   _vm._v("Fizikë 1 ... 5 Kredite"),
                   _c("br"),
-                  _vm._v(
-                    "\n              Elementet e Informatikës... 6 Kredite "
-                  ),
+                  _vm._v("\n          Elementet e Informatikës... 6 Kredite "),
                   _c("br"),
-                  _vm._v("Algjebër dhe\n              Gjeometri... 6 Kredite"),
+                  _vm._v("Algjebër dhe\n          Gjeometri... 6 Kredite"),
                   _c("br"),
-                  _vm._v(
-                    "\n              Komunikimi Inxhinierik ... 4 Kredite"
-                  ),
+                  _vm._v("\n          Komunikimi Inxhinierik ... 4 Kredite"),
                   _c("br"),
                   _vm._v(" "),
                   _c("br"),
@@ -94483,20 +94389,20 @@ var staticRenderFns = [
                   _vm._v(" "),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Analizë Matematike 2... 6 Kredite\n              "
+                    "\n\n          Analizë Matematike 2... 6 Kredite\n          "
                   ),
                   _c("br"),
-                  _vm._v("\n\n              Fizikë 2... 5 Kredite"),
+                  _vm._v("\n\n          Fizikë 2... 5 Kredite"),
                   _c("br"),
-                  _vm._v("\n\n              Elektroteknikë 1... 5 Kredite"),
+                  _vm._v("\n\n          Elektroteknikë 1... 5 Kredite"),
                   _c("br"),
-                  _vm._v("\n\n              Analizë matematike 3... 3 Kredite"),
+                  _vm._v("\n\n          Analizë matematike 3... 3 Kredite"),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Teknikat dhe gjuhët e programimit... 6 Kredite\n              "
+                    "\n\n          Teknikat dhe gjuhët e programimit... 6 Kredite\n          "
                   ),
                   _c("br"),
-                  _vm._v("\n\n              Probabiliteti ... 3 Kredite "),
+                  _vm._v("\n\n          Probabiliteti ... 3 Kredite "),
                   _c("br")
                 ])
               ]
@@ -94521,11 +94427,7 @@ var staticRenderFns = [
                         "aria-controls": "collapseTwo"
                       }
                     },
-                    [
-                      _vm._v(
-                        "\n                VITI I DYTE-60 kredite\n              "
-                      )
-                    ]
+                    [_vm._v("\n            VITI I DYTE-60 kredite\n          ")]
                   )
                 ])
               ]
@@ -94547,27 +94449,25 @@ var staticRenderFns = [
                   _vm._v(" "),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Analizë numerike... 3 Kredite\n\n              "
+                    "\n\n          Analizë numerike... 3 Kredite\n\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n              Programimi i orientuar nga objekti... 6 Kredite\n              "
+                    "\n          Programimi i orientuar nga objekti... 6 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Teoria e sinjaleve... 6 Kredite\n\n              "
+                    "\n\n          Teoria e sinjaleve... 6 Kredite\n\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n              Arkitektura e kompjuterave ... 5 Kredite\n\n              "
+                    "\n          Arkitektura e kompjuterave ... 5 Kredite\n\n          "
                   ),
                   _c("br"),
-                  _vm._v(
-                    "\n              Automatizim ... 5 Kredite\n\n              "
-                  ),
+                  _vm._v("\n          Automatizim ... 5 Kredite\n\n          "),
                   _c("br"),
                   _vm._v(
-                    "\n              Elementet dhe teknologjitë elektronike ... 6 Kredite"
+                    "\n          Elementet dhe teknologjitë elektronike ... 6 Kredite"
                   ),
                   _c("br"),
                   _vm._v(" "),
@@ -94577,23 +94477,23 @@ var staticRenderFns = [
                   _vm._v(" "),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Sistemet elektronike ... 6 Kredite\n\n              "
+                    "\n\n          Sistemet elektronike ... 6 Kredite\n\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n              Përpunimi numerik i sinjaleve ... 6 Kredite\n              "
+                    "\n          Përpunimi numerik i sinjaleve ... 6 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Rrjeta telematike ... 5 Kredite\n              "
+                    "\n\n          Rrjeta telematike ... 5 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Matje elektronike...5 Kredite\n\n              "
+                    "\n\n          Matje elektronike...5 Kredite\n\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n              Strukture te dhenash... 6 Kredite\n            "
+                    "\n          Strukture te dhenash... 6 Kredite\n        "
                   )
                 ])
               ]
@@ -94620,7 +94520,7 @@ var staticRenderFns = [
                     },
                     [
                       _vm._v(
-                        "\n                VITI I TRETE-60 kredite\n              "
+                        "\n            VITI I TRETE-60 kredite\n          "
                       )
                     ]
                   )
@@ -94643,24 +94543,22 @@ var staticRenderFns = [
                   _c("b", [_c("i", [_vm._v(" Semestri i I-rë:")])]),
                   _vm._v(" "),
                   _c("br"),
+                  _vm._v("\n\n          Algoritmike... 6 Kredite\n          "),
+                  _c("br"),
                   _vm._v(
-                    "\n\n              Algoritmike... 6 Kredite\n              "
+                    "\n\n          Programim Web ... 6 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Programim Web ... 6 Kredite\n              "
+                    "\n\n          Inxhinieri Softi... 6 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Inxhinieri Softi... 6 Kredite\n              "
+                    "\n\n          Sisteme Operative... 6 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Sisteme Operative... 6 Kredite\n              "
-                  ),
-                  _c("br"),
-                  _vm._v(
-                    "\n\n           Baza te dhenash... 6 Kredite\n\n              "
+                    "\n\n          Baza te dhenash... 6 Kredite\n\n          "
                   ),
                   _c("br"),
                   _vm._v(" "),
@@ -94670,23 +94568,23 @@ var staticRenderFns = [
                   _vm._v(" "),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Programim ne ambjentet e shperndara... 6 Kredite\n             "
+                    "\n\n          Programim ne ambjentet e shperndara... 6 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Lëndë me zgjedhje (Formim i Përgjithshëm) ... 5 Kredite\n              "
+                    "\n\n          Lëndë me zgjedhje (Formim i Përgjithshëm) ... 5 Kredite\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Lëndë me zgjedhje (Formim i Përgjithshëm) ... 3 Kredite\n\n              "
+                    "\n\n          Lëndë me zgjedhje (Formim i Përgjithshëm) ... 3 Kredite\n\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Praktikë (programi) ... 4 Kredite\n\n              "
+                    "\n\n          Praktikë (programi) ... 4 Kredite\n\n          "
                   ),
                   _c("br"),
                   _vm._v(
-                    "\n\n              Diplomë (programi) ... 6 Kredite\n            "
+                    "\n\n          Diplomë (programi) ... 6 Kredite\n        "
                   )
                 ])
               ]
@@ -94715,7 +94613,7 @@ function injectStyle (ssrContext) {
   if (disposed) return
   __webpack_require__(306)
 }
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(2)
 /* script */
 var __vue_script__ = __webpack_require__(308)
 /* template */
@@ -94787,7 +94685,7 @@ if(false) {
 /* 307 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(3)(false);
+exports = module.exports = __webpack_require__(4)(false);
 // imports
 
 
@@ -95831,7 +95729,7 @@ if (false) {
 /* 310 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(2)
 /* script */
 var __vue_script__ = null
 /* template */
@@ -95862,11 +95760,11 @@ module.exports = Component.exports
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(2)
 /* script */
 var __vue_script__ = __webpack_require__(312)
 /* template */
-var __vue_template__ = __webpack_require__(420)
+var __vue_template__ = __webpack_require__(419)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -95910,7 +95808,7 @@ module.exports = Component.exports
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_mammoth__ = __webpack_require__(314);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_mammoth__ = __webpack_require__(313);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0_mammoth___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0_mammoth__);
 //
 //
@@ -95935,18 +95833,17 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 313 */,
-/* 314 */
+/* 313 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var _ = __webpack_require__(2);
+var _ = __webpack_require__(3);
 
-var docxReader = __webpack_require__(315);
-var docxStyleMap = __webpack_require__(398);
-var DocumentConverter = __webpack_require__(399).DocumentConverter;
-var readStyle = __webpack_require__(406).readStyle;
-var readOptions = __webpack_require__(416).readOptions;
-var unzip = __webpack_require__(417);
+var docxReader = __webpack_require__(314);
+var docxStyleMap = __webpack_require__(397);
+var DocumentConverter = __webpack_require__(398).DocumentConverter;
+var readStyle = __webpack_require__(405).readStyle;
+var readOptions = __webpack_require__(415).readOptions;
+var unzip = __webpack_require__(416);
 var Result = __webpack_require__(12).Result;
 
 exports.convertToHtml = convertToHtml;
@@ -95954,8 +95851,8 @@ exports.convertToMarkdown = convertToMarkdown;
 exports.convert = convert;
 exports.extractRawText = extractRawText;
 exports.images = __webpack_require__(214);
-exports.transforms = __webpack_require__(418);
-exports.underline = __webpack_require__(419);
+exports.transforms = __webpack_require__(417);
+exports.underline = __webpack_require__(418);
 exports.embedStyleMap = embedStyleMap;
 exports.readEmbeddedStyleMap = readEmbeddedStyleMap;
 
@@ -96053,29 +95950,29 @@ exports.styleMapping = function() {
 
 
 /***/ }),
-/* 315 */
+/* 314 */
 /***/ (function(module, exports, __webpack_require__) {
 
 exports.read = read;
 exports._findPartPaths = findPartPaths;
 
-var path = __webpack_require__(316);
+var path = __webpack_require__(315);
 
 var promises = __webpack_require__(11);
 var documents = __webpack_require__(19);
 var Result = __webpack_require__(12).Result;
 var zipfile = __webpack_require__(192);
 
-var readXmlFromZipFile = __webpack_require__(368).readXmlFromZipFile;
-var createBodyReader = __webpack_require__(386).createBodyReader;
-var DocumentXmlReader = __webpack_require__(390).DocumentXmlReader;
-var relationshipsReader = __webpack_require__(391);
-var contentTypesReader = __webpack_require__(392);
-var numberingXml = __webpack_require__(393);
-var stylesReader = __webpack_require__(394);
-var notesReader = __webpack_require__(395);
-var commentsReader = __webpack_require__(396);
-var Files = __webpack_require__(397).Files;
+var readXmlFromZipFile = __webpack_require__(367).readXmlFromZipFile;
+var createBodyReader = __webpack_require__(385).createBodyReader;
+var DocumentXmlReader = __webpack_require__(389).DocumentXmlReader;
+var relationshipsReader = __webpack_require__(390);
+var contentTypesReader = __webpack_require__(391);
+var numberingXml = __webpack_require__(392);
+var stylesReader = __webpack_require__(393);
+var notesReader = __webpack_require__(394);
+var commentsReader = __webpack_require__(395);
+var Files = __webpack_require__(396).Files;
 
 
 function read(docxFile, input) {
@@ -96281,7 +96178,7 @@ var readPackageRelationships = xmlFileReader({
 
 
 /***/ }),
-/* 316 */
+/* 315 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(process) {// Copyright Joyent, Inc. and other Node contributors.
@@ -96512,7 +96409,7 @@ var substr = 'ab'.substr(-1) === 'b'
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(9)))
 
 /***/ }),
-/* 317 */
+/* 316 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -96546,7 +96443,7 @@ if (util.isNode) {
 util.notEnumerableProp(Promise, "_getDomain", getDomain);
 
 var es5 = __webpack_require__(18);
-var Async = __webpack_require__(318);
+var Async = __webpack_require__(317);
 var async = new Async();
 es5.defineProperty(Promise, "_async", {value: async});
 var errors = __webpack_require__(13);
@@ -96560,18 +96457,18 @@ Promise.AggregateError = errors.AggregateError;
 var INTERNAL = function(){};
 var APPLY = {};
 var NEXT_FILTER = {};
-var tryConvertToPromise = __webpack_require__(321)(Promise, INTERNAL);
+var tryConvertToPromise = __webpack_require__(320)(Promise, INTERNAL);
 var PromiseArray =
-    __webpack_require__(322)(Promise, INTERNAL,
+    __webpack_require__(321)(Promise, INTERNAL,
                                tryConvertToPromise, apiRejection, Proxyable);
-var Context = __webpack_require__(323)(Promise);
+var Context = __webpack_require__(322)(Promise);
  /*jshint unused:false*/
 var createContext = Context.create;
-var debug = __webpack_require__(324)(Promise, Context);
+var debug = __webpack_require__(323)(Promise, Context);
 var CapturedTrace = debug.CapturedTrace;
 var PassThroughHandlerContext =
-    __webpack_require__(325)(Promise, tryConvertToPromise);
-var catchFilter = __webpack_require__(326)(NEXT_FILTER);
+    __webpack_require__(324)(Promise, tryConvertToPromise);
+var catchFilter = __webpack_require__(325)(NEXT_FILTER);
 var nodebackForPromise = __webpack_require__(191);
 var errorObj = util.errorObj;
 var tryCatch = util.tryCatch;
@@ -97240,31 +97137,31 @@ util.notEnumerableProp(Promise,
                        "_makeSelfResolutionError",
                        makeSelfResolutionError);
 
-__webpack_require__(327)(Promise, INTERNAL, tryConvertToPromise, apiRejection,
+__webpack_require__(326)(Promise, INTERNAL, tryConvertToPromise, apiRejection,
     debug);
-__webpack_require__(328)(Promise, INTERNAL, tryConvertToPromise, debug);
-__webpack_require__(329)(Promise, PromiseArray, apiRejection, debug);
+__webpack_require__(327)(Promise, INTERNAL, tryConvertToPromise, debug);
+__webpack_require__(328)(Promise, PromiseArray, apiRejection, debug);
+__webpack_require__(329)(Promise);
 __webpack_require__(330)(Promise);
-__webpack_require__(331)(Promise);
-__webpack_require__(332)(
+__webpack_require__(331)(
     Promise, PromiseArray, tryConvertToPromise, INTERNAL, async, getDomain);
 Promise.Promise = Promise;
 Promise.version = "3.4.7";
-__webpack_require__(333)(Promise, PromiseArray, apiRejection, tryConvertToPromise, INTERNAL, debug);
-__webpack_require__(334)(Promise);
-__webpack_require__(335)(Promise, apiRejection, tryConvertToPromise, createContext, INTERNAL, debug);
-__webpack_require__(336)(Promise, INTERNAL, debug);
-__webpack_require__(337)(Promise, apiRejection, INTERNAL, tryConvertToPromise, Proxyable, debug);
-__webpack_require__(338)(Promise);
-__webpack_require__(339)(Promise, INTERNAL);
-__webpack_require__(340)(Promise, PromiseArray, tryConvertToPromise, apiRejection);
-__webpack_require__(341)(Promise, INTERNAL, tryConvertToPromise, apiRejection);
-__webpack_require__(342)(Promise, PromiseArray, apiRejection, tryConvertToPromise, INTERNAL, debug);
-__webpack_require__(343)(Promise, PromiseArray, debug);
-__webpack_require__(344)(Promise, PromiseArray, apiRejection);
+__webpack_require__(332)(Promise, PromiseArray, apiRejection, tryConvertToPromise, INTERNAL, debug);
+__webpack_require__(333)(Promise);
+__webpack_require__(334)(Promise, apiRejection, tryConvertToPromise, createContext, INTERNAL, debug);
+__webpack_require__(335)(Promise, INTERNAL, debug);
+__webpack_require__(336)(Promise, apiRejection, INTERNAL, tryConvertToPromise, Proxyable, debug);
+__webpack_require__(337)(Promise);
+__webpack_require__(338)(Promise, INTERNAL);
+__webpack_require__(339)(Promise, PromiseArray, tryConvertToPromise, apiRejection);
+__webpack_require__(340)(Promise, INTERNAL, tryConvertToPromise, apiRejection);
+__webpack_require__(341)(Promise, PromiseArray, apiRejection, tryConvertToPromise, INTERNAL, debug);
+__webpack_require__(342)(Promise, PromiseArray, debug);
+__webpack_require__(343)(Promise, PromiseArray, apiRejection);
+__webpack_require__(344)(Promise, INTERNAL);
 __webpack_require__(345)(Promise, INTERNAL);
-__webpack_require__(346)(Promise, INTERNAL);
-__webpack_require__(347)(Promise);
+__webpack_require__(346)(Promise);
                                                          
     util.toFastProperties(Promise);                                          
     util.toFastProperties(Promise.prototype);                                
@@ -97293,15 +97190,15 @@ __webpack_require__(347)(Promise);
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(9)))
 
 /***/ }),
-/* 318 */
+/* 317 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 /* WEBPACK VAR INJECTION */(function(process) {
 var firstLineError;
 try {throw new Error(); } catch (e) {firstLineError = e;}
-var schedule = __webpack_require__(319);
-var Queue = __webpack_require__(320);
+var schedule = __webpack_require__(318);
+var Queue = __webpack_require__(319);
 var util = __webpack_require__(1);
 
 function Async() {
@@ -97462,7 +97359,7 @@ module.exports.firstLineError = firstLineError;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(9)))
 
 /***/ }),
-/* 319 */
+/* 318 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -97531,7 +97428,7 @@ module.exports = schedule;
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(7), __webpack_require__(9), __webpack_require__(41).setImmediate))
 
 /***/ }),
-/* 320 */
+/* 319 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -97611,7 +97508,7 @@ module.exports = Queue;
 
 
 /***/ }),
-/* 321 */
+/* 320 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -97704,7 +97601,7 @@ return tryConvertToPromise;
 
 
 /***/ }),
-/* 322 */
+/* 321 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -97895,7 +97792,7 @@ return PromiseArray;
 
 
 /***/ }),
-/* 323 */
+/* 322 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -97971,7 +97868,7 @@ return Context;
 
 
 /***/ }),
-/* 324 */
+/* 323 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -98895,7 +98792,7 @@ return {
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(9)))
 
 /***/ }),
-/* 325 */
+/* 324 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -99013,7 +98910,7 @@ return PassThroughHandlerContext;
 
 
 /***/ }),
-/* 326 */
+/* 325 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -99062,7 +98959,7 @@ return catchFilter;
 
 
 /***/ }),
-/* 327 */
+/* 326 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -99124,7 +99021,7 @@ Promise.prototype._resolveFromSyncValue = function (value) {
 
 
 /***/ }),
-/* 328 */
+/* 327 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -99198,7 +99095,7 @@ Promise.bind = function (thisArg, value) {
 
 
 /***/ }),
-/* 329 */
+/* 328 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -99334,7 +99231,7 @@ Promise.prototype._resultCancelled = function() {
 
 
 /***/ }),
-/* 330 */
+/* 329 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -99387,7 +99284,7 @@ Promise.prototype.catchReturn = function (value) {
 
 
 /***/ }),
-/* 331 */
+/* 330 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -99497,7 +99394,7 @@ Promise.PromiseInspection = PromiseInspection;
 
 
 /***/ }),
-/* 332 */
+/* 331 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -99672,7 +99569,7 @@ Promise.join = function () {
 
 
 /***/ }),
-/* 333 */
+/* 332 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -99847,7 +99744,7 @@ Promise.map = function (promises, fn, options, _filter) {
 
 
 /***/ }),
-/* 334 */
+/* 333 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -99977,7 +99874,7 @@ Promise.prototype.get = function (propertyName) {
 
 
 /***/ }),
-/* 335 */
+/* 334 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -100210,7 +100107,7 @@ module.exports = function (Promise, apiRejection, tryConvertToPromise,
 
 
 /***/ }),
-/* 336 */
+/* 335 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -100310,7 +100207,7 @@ Promise.prototype.timeout = function (ms, message) {
 
 
 /***/ }),
-/* 337 */
+/* 336 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -100540,7 +100437,7 @@ Promise.spawn = function (generatorFunction) {
 
 
 /***/ }),
-/* 338 */
+/* 337 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -100605,7 +100502,7 @@ Promise.prototype.asCallback = Promise.prototype.nodeify = function (nodeback,
 
 
 /***/ }),
-/* 339 */
+/* 338 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -100926,7 +100823,7 @@ Promise.promisifyAll = function (target, options) {
 
 
 /***/ }),
-/* 340 */
+/* 339 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -101051,7 +100948,7 @@ Promise.props = function (promises) {
 
 
 /***/ }),
-/* 341 */
+/* 340 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -101107,7 +101004,7 @@ Promise.prototype.race = function () {
 
 
 /***/ }),
-/* 342 */
+/* 341 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -101286,7 +101183,7 @@ function gotValue(value) {
 
 
 /***/ }),
-/* 343 */
+/* 342 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -101336,7 +101233,7 @@ Promise.prototype.settle = function () {
 
 
 /***/ }),
-/* 344 */
+/* 343 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -101491,7 +101388,7 @@ Promise._SomePromiseArray = SomePromiseArray;
 
 
 /***/ }),
-/* 345 */
+/* 344 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -101510,7 +101407,7 @@ Promise.filter = function (promises, fn, options) {
 
 
 /***/ }),
-/* 346 */
+/* 345 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -101547,7 +101444,7 @@ Promise.mapSeries = PromiseMapSeries;
 
 
 /***/ }),
-/* 347 */
+/* 346 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -101575,7 +101472,7 @@ Promise.prototype.any = function () {
 
 
 /***/ }),
-/* 348 */
+/* 347 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -101630,7 +101527,7 @@ function JSZip(data, options) {
     };
 }
 JSZip.prototype = __webpack_require__(43);
-JSZip.prototype.load = __webpack_require__(363);
+JSZip.prototype.load = __webpack_require__(362);
 JSZip.support = __webpack_require__(21);
 JSZip.defaults = __webpack_require__(199);
 
@@ -101638,7 +101535,7 @@ JSZip.defaults = __webpack_require__(199);
  * @deprecated
  * This namespace will be removed in a future version without replacement.
  */
-JSZip.utils = __webpack_require__(367);
+JSZip.utils = __webpack_require__(366);
 
 JSZip.base64 = {
     /**
@@ -101661,14 +101558,14 @@ module.exports = JSZip;
 
 
 /***/ }),
-/* 349 */
+/* 348 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 var USE_TYPEDARRAY = (typeof Uint8Array !== 'undefined') && (typeof Uint16Array !== 'undefined') && (typeof Uint32Array !== 'undefined');
 
-var pako = __webpack_require__(350);
+var pako = __webpack_require__(349);
 exports.uncompressInputType = USE_TYPEDARRAY ? "uint8array" : "array";
 exports.compressInputType = USE_TYPEDARRAY ? "uint8array" : "array";
 
@@ -101684,7 +101581,7 @@ exports.uncompress =  function(input) {
 
 
 /***/ }),
-/* 350 */
+/* 349 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -101693,8 +101590,8 @@ exports.uncompress =  function(input) {
 
 var assign    = __webpack_require__(14).assign;
 
-var deflate   = __webpack_require__(351);
-var inflate   = __webpack_require__(354);
+var deflate   = __webpack_require__(350);
+var inflate   = __webpack_require__(353);
 var constants = __webpack_require__(197);
 
 var pako = {};
@@ -101705,14 +101602,14 @@ module.exports = pako;
 
 
 /***/ }),
-/* 351 */
+/* 350 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
 
-var zlib_deflate = __webpack_require__(352);
+var zlib_deflate = __webpack_require__(351);
 var utils        = __webpack_require__(14);
 var strings      = __webpack_require__(195);
 var msg          = __webpack_require__(45);
@@ -102112,14 +102009,14 @@ exports.gzip = gzip;
 
 
 /***/ }),
-/* 352 */
+/* 351 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
 var utils   = __webpack_require__(14);
-var trees   = __webpack_require__(353);
+var trees   = __webpack_require__(352);
 var adler32 = __webpack_require__(193);
 var crc32   = __webpack_require__(194);
 var msg     = __webpack_require__(45);
@@ -103974,7 +103871,7 @@ exports.deflateTune = deflateTune;
 
 
 /***/ }),
-/* 353 */
+/* 352 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -105183,20 +105080,20 @@ exports._tr_align = _tr_align;
 
 
 /***/ }),
-/* 354 */
+/* 353 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
 
-var zlib_inflate = __webpack_require__(355);
+var zlib_inflate = __webpack_require__(354);
 var utils        = __webpack_require__(14);
 var strings      = __webpack_require__(195);
 var c            = __webpack_require__(197);
 var msg          = __webpack_require__(45);
 var ZStream      = __webpack_require__(196);
-var GZheader     = __webpack_require__(358);
+var GZheader     = __webpack_require__(357);
 
 var toString = Object.prototype.toString;
 
@@ -105608,7 +105505,7 @@ exports.ungzip  = inflate;
 
 
 /***/ }),
-/* 355 */
+/* 354 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -105618,8 +105515,8 @@ exports.ungzip  = inflate;
 var utils         = __webpack_require__(14);
 var adler32       = __webpack_require__(193);
 var crc32         = __webpack_require__(194);
-var inflate_fast  = __webpack_require__(356);
-var inflate_table = __webpack_require__(357);
+var inflate_fast  = __webpack_require__(355);
+var inflate_table = __webpack_require__(356);
 
 var CODES = 0;
 var LENS = 1;
@@ -107153,7 +107050,7 @@ exports.inflateUndermine = inflateUndermine;
 
 
 /***/ }),
-/* 356 */
+/* 355 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -107486,7 +107383,7 @@ module.exports = function inflate_fast(strm, start) {
 
 
 /***/ }),
-/* 357 */
+/* 356 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -107820,7 +107717,7 @@ module.exports = function inflate_table(type, lens, lens_index, codes, table, ta
 
 
 /***/ }),
-/* 358 */
+/* 357 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -107867,7 +107764,7 @@ module.exports = GZheader;
 
 
 /***/ }),
-/* 359 */
+/* 358 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -107976,7 +107873,7 @@ module.exports = function crc32(input, crc) {
 
 
 /***/ }),
-/* 360 */
+/* 359 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -108190,7 +108087,7 @@ exports.utf8decode = function utf8decode(buf) {
 
 
 /***/ }),
-/* 361 */
+/* 360 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -108227,7 +108124,7 @@ module.exports = StringWriter;
 
 
 /***/ }),
-/* 362 */
+/* 361 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -108270,13 +108167,13 @@ module.exports = Uint8ArrayWriter;
 
 
 /***/ }),
-/* 363 */
+/* 362 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 var base64 = __webpack_require__(42);
-var ZipEntries = __webpack_require__(364);
+var ZipEntries = __webpack_require__(363);
 module.exports = function(data, options) {
     var files, zipEntries, i, input;
     options = options || {};
@@ -108308,17 +108205,17 @@ module.exports = function(data, options) {
 
 
 /***/ }),
-/* 364 */
+/* 363 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 var StringReader = __webpack_require__(201);
-var NodeBufferReader = __webpack_require__(365);
+var NodeBufferReader = __webpack_require__(364);
 var Uint8ArrayReader = __webpack_require__(203);
 var utils = __webpack_require__(10);
 var sig = __webpack_require__(198);
-var ZipEntry = __webpack_require__(366);
+var ZipEntry = __webpack_require__(365);
 var support = __webpack_require__(21);
 var jszipProto = __webpack_require__(43);
 //  class ZipEntries {{{
@@ -108536,7 +108433,7 @@ module.exports = ZipEntries;
 
 
 /***/ }),
-/* 365 */
+/* 364 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -108563,7 +108460,7 @@ module.exports = NodeBufferReader;
 
 
 /***/ }),
-/* 366 */
+/* 365 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -108880,7 +108777,7 @@ module.exports = ZipEntry;
 
 
 /***/ }),
-/* 367 */
+/* 366 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -108992,10 +108889,10 @@ exports.isRegExp = function (object) {
 
 
 /***/ }),
-/* 368 */
+/* 367 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var _ = __webpack_require__(2);
+var _ = __webpack_require__(3);
 
 var promises = __webpack_require__(11);
 var xml = __webpack_require__(204);
@@ -109056,12 +108953,12 @@ function collapseAlternateContent(node) {
 
 
 /***/ }),
-/* 369 */
+/* 368 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var promises = __webpack_require__(11);
-var sax = __webpack_require__(370);
-var _ = __webpack_require__(2);
+var sax = __webpack_require__(369);
+var _ = __webpack_require__(3);
 
 var nodes = __webpack_require__(205);
 var Element = nodes.Element;
@@ -109145,7 +109042,7 @@ function mapObject(input, valueFunc, keyFunc) {
 
 
 /***/ }),
-/* 370 */
+/* 369 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(Buffer) {;(function (sax) { // wrapper for non-node envs
@@ -109309,7 +109206,7 @@ function mapObject(input, valueFunc, keyFunc) {
 
   var Stream
   try {
-    Stream = __webpack_require__(371).Stream
+    Stream = __webpack_require__(370).Stream
   } catch (ex) {
     Stream = function () {}
   }
@@ -110726,7 +110623,7 @@ function mapObject(input, valueFunc, keyFunc) {
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(16).Buffer))
 
 /***/ }),
-/* 371 */
+/* 370 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // Copyright Joyent, Inc. and other Node contributors.
@@ -110757,10 +110654,10 @@ var inherits = __webpack_require__(20);
 
 inherits(Stream, EE);
 Stream.Readable = __webpack_require__(48);
-Stream.Writable = __webpack_require__(377);
-Stream.Duplex = __webpack_require__(378);
-Stream.Transform = __webpack_require__(379);
-Stream.PassThrough = __webpack_require__(380);
+Stream.Writable = __webpack_require__(376);
+Stream.Duplex = __webpack_require__(377);
+Stream.Transform = __webpack_require__(378);
+Stream.PassThrough = __webpack_require__(379);
 
 // Backwards-compat with node 0.4.x
 Stream.Stream = Stream;
@@ -110859,13 +110756,13 @@ Stream.prototype.pipe = function(dest, options) {
 
 
 /***/ }),
-/* 372 */
+/* 371 */
 /***/ (function(module, exports) {
 
 /* (ignored) */
 
 /***/ }),
-/* 373 */
+/* 372 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -110874,7 +110771,7 @@ Stream.prototype.pipe = function(dest, options) {
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var Buffer = __webpack_require__(25).Buffer;
-var util = __webpack_require__(374);
+var util = __webpack_require__(373);
 
 function copyBuffer(src, target, offset) {
   src.copy(target, offset);
@@ -110950,13 +110847,13 @@ if (util && util.inspect && util.inspect.custom) {
 }
 
 /***/ }),
-/* 374 */
+/* 373 */
 /***/ (function(module, exports) {
 
 /* (ignored) */
 
 /***/ }),
-/* 375 */
+/* 374 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global) {
@@ -111030,7 +110927,7 @@ function config (name) {
 /* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(7)))
 
 /***/ }),
-/* 376 */
+/* 375 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -111083,39 +110980,39 @@ PassThrough.prototype._transform = function (chunk, encoding, cb) {
 };
 
 /***/ }),
-/* 377 */
+/* 376 */
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = __webpack_require__(49);
 
 
 /***/ }),
-/* 378 */
+/* 377 */
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = __webpack_require__(17);
 
 
 /***/ }),
-/* 379 */
+/* 378 */
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = __webpack_require__(48).Transform
 
 
 /***/ }),
-/* 380 */
+/* 379 */
 /***/ (function(module, exports, __webpack_require__) {
 
 module.exports = __webpack_require__(48).PassThrough
 
 
 /***/ }),
-/* 381 */
+/* 380 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var _ = __webpack_require__(2);
-var xmlbuilder = __webpack_require__(382);
+var _ = __webpack_require__(3);
+var xmlbuilder = __webpack_require__(381);
 
 
 exports.writeString = writeString;
@@ -111178,7 +111075,7 @@ function writeTextNode(builder, node) {
 
 
 /***/ }),
-/* 382 */
+/* 381 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // Generated by CoffeeScript 1.12.7
@@ -111187,13 +111084,13 @@ function writeTextNode(builder, node) {
 
   ref = __webpack_require__(15), assign = ref.assign, isFunction = ref.isFunction;
 
-  XMLDocument = __webpack_require__(383);
+  XMLDocument = __webpack_require__(382);
 
-  XMLDocumentCB = __webpack_require__(384);
+  XMLDocumentCB = __webpack_require__(383);
 
   XMLStringWriter = __webpack_require__(52);
 
-  XMLStreamWriter = __webpack_require__(385);
+  XMLStreamWriter = __webpack_require__(384);
 
   module.exports.create = function(name, xmldec, doctype, options) {
     var doc, root;
@@ -111237,7 +111134,7 @@ function writeTextNode(builder, node) {
 
 
 /***/ }),
-/* 383 */
+/* 382 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // Generated by CoffeeScript 1.12.7
@@ -111292,7 +111189,7 @@ function writeTextNode(builder, node) {
 
 
 /***/ }),
-/* 384 */
+/* 383 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // Generated by CoffeeScript 1.12.7
@@ -111712,7 +111609,7 @@ function writeTextNode(builder, node) {
 
 
 /***/ }),
-/* 385 */
+/* 384 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // Generated by CoffeeScript 1.12.7
@@ -112005,19 +111902,19 @@ function writeTextNode(builder, node) {
 
 
 /***/ }),
-/* 386 */
+/* 385 */
 /***/ (function(module, exports, __webpack_require__) {
 
 exports.createBodyReader = createBodyReader;
 exports._readNumberingProperties = readNumberingProperties;
 
-var dingbatToUnicode = __webpack_require__(387);
-var _ = __webpack_require__(2);
+var dingbatToUnicode = __webpack_require__(386);
+var _ = __webpack_require__(3);
 
 var documents = __webpack_require__(19);
 var Result = __webpack_require__(12).Result;
 var warning = __webpack_require__(12).warning;
-var uris = __webpack_require__(389);
+var uris = __webpack_require__(388);
 
 function createBodyReader(options) {
     return {
@@ -112660,7 +112557,7 @@ function identity(value) {
 
 
 /***/ }),
-/* 387 */
+/* 386 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -112670,7 +112567,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.hex = exports.dec = exports.codePoint = void 0;
-var dingbats_1 = __importDefault(__webpack_require__(388));
+var dingbats_1 = __importDefault(__webpack_require__(387));
 var dingbatsByCodePoint = {};
 var fromCodePoint = String.fromCodePoint ? String.fromCodePoint : fromCodePointPolyfill;
 for (var _i = 0, dingbats_2 = dingbats_1.default; _i < dingbats_2.length; _i++) {
@@ -112711,7 +112608,7 @@ function fromCodePointPolyfill(codePoint) {
 
 
 /***/ }),
-/* 388 */
+/* 387 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -113784,7 +113681,7 @@ exports.default = dingbats;
 
 
 /***/ }),
-/* 389 */
+/* 388 */
 /***/ (function(module, exports) {
 
 exports.uriToZipEntryName = uriToZipEntryName;
@@ -113811,7 +113708,7 @@ function replaceFragment(uri, fragment) {
 
 
 /***/ }),
-/* 390 */
+/* 389 */
 /***/ (function(module, exports, __webpack_require__) {
 
 exports.DocumentXmlReader = DocumentXmlReader;
@@ -113843,7 +113740,7 @@ function DocumentXmlReader(options) {
 
 
 /***/ }),
-/* 391 */
+/* 390 */
 /***/ (function(module, exports) {
 
 exports.readRelationships = readRelationships;
@@ -113892,7 +113789,7 @@ function Relationships(relationships) {
 
 
 /***/ }),
-/* 392 */
+/* 391 */
 /***/ (function(module, exports) {
 
 exports.readContentTypesFromXml = readContentTypesFromXml;
@@ -113956,10 +113853,10 @@ function contentTypes(overrides, extensionDefaults) {
 
 
 /***/ }),
-/* 393 */
+/* 392 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var _ = __webpack_require__(2);
+var _ = __webpack_require__(3);
 
 exports.readNumberingXml = readNumberingXml;
 exports.Numbering = Numbering;
@@ -114052,7 +113949,7 @@ function readNums(root) {
 
 
 /***/ }),
-/* 394 */
+/* 393 */
 /***/ (function(module, exports) {
 
 exports.readStylesXml = readStylesXml;
@@ -114128,7 +114025,7 @@ function readNumberingStyleElement(styleElement) {
 
 
 /***/ }),
-/* 395 */
+/* 394 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var documents = __webpack_require__(19);
@@ -114162,7 +114059,7 @@ function createReader(noteType, bodyReader) {
 
 
 /***/ }),
-/* 396 */
+/* 395 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var documents = __webpack_require__(19);
@@ -114199,7 +114096,7 @@ exports.createCommentsReader = createCommentsReader;
 
 
 /***/ }),
-/* 397 */
+/* 396 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var promises = __webpack_require__(11);
@@ -114219,10 +114116,10 @@ function Files() {
 
 
 /***/ }),
-/* 398 */
+/* 397 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var _ = __webpack_require__(2);
+var _ = __webpack_require__(3);
 
 var promises = __webpack_require__(11);
 var xml = __webpack_require__(204);
@@ -114300,10 +114197,10 @@ function readStyleMap(docxFile) {
 
 
 /***/ }),
-/* 399 */
+/* 398 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var _ = __webpack_require__(2);
+var _ = __webpack_require__(3);
 
 var promises = __webpack_require__(11);
 var documents = __webpack_require__(19);
@@ -114311,7 +114208,7 @@ var htmlPaths = __webpack_require__(38);
 var results = __webpack_require__(12);
 var images = __webpack_require__(214);
 var Html = __webpack_require__(39);
-var writers = __webpack_require__(401);
+var writers = __webpack_require__(400);
 
 exports.DocumentConverter = DocumentConverter;
 
@@ -114762,10 +114659,10 @@ var commentAuthorLabel = exports.commentAuthorLabel = function commentAuthorLabe
 
 
 /***/ }),
-/* 400 */
+/* 399 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var _ = __webpack_require__(2);
+var _ = __webpack_require__(3);
 
 var ast = __webpack_require__(213);
 
@@ -114856,11 +114753,11 @@ module.exports = simplify;
 
 
 /***/ }),
-/* 401 */
+/* 400 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var htmlWriter = __webpack_require__(402);
-var markdownWriter = __webpack_require__(405);
+var htmlWriter = __webpack_require__(401);
+var markdownWriter = __webpack_require__(404);
 
 exports.writer = writer;
 
@@ -114876,11 +114773,11 @@ function writer(options) {
 
 
 /***/ }),
-/* 402 */
+/* 401 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var util = __webpack_require__(215);
-var _ = __webpack_require__(2);
+var _ = __webpack_require__(3);
 
 exports.writer = writer;
 
@@ -115042,7 +114939,7 @@ function escapeHtmlAttribute(value) {
 
 
 /***/ }),
-/* 403 */
+/* 402 */
 /***/ (function(module, exports) {
 
 module.exports = function isBuffer(arg) {
@@ -115053,7 +114950,7 @@ module.exports = function isBuffer(arg) {
 }
 
 /***/ }),
-/* 404 */
+/* 403 */
 /***/ (function(module, exports) {
 
 if (typeof Object.create === 'function') {
@@ -115082,10 +114979,10 @@ if (typeof Object.create === 'function') {
 
 
 /***/ }),
-/* 405 */
+/* 404 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var _ = __webpack_require__(2);
+var _ = __webpack_require__(3);
 
 
 function symmetricMarkdownElement(end) {
@@ -115251,15 +115148,15 @@ function escapeMarkdown(value) {
 
 
 /***/ }),
-/* 406 */
+/* 405 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var _ = __webpack_require__(2);
+var _ = __webpack_require__(3);
 var lop = __webpack_require__(216);
 
-var documentMatchers = __webpack_require__(414);
+var documentMatchers = __webpack_require__(413);
 var htmlPaths = __webpack_require__(38);
-var tokenise = __webpack_require__(415).tokenise;
+var tokenise = __webpack_require__(414).tokenise;
 var results = __webpack_require__(12);
 
 exports.readHtmlPath = readHtmlPath;
@@ -115580,10 +115477,10 @@ var styleRule = createStyleRule();
 
 
 /***/ }),
-/* 407 */
+/* 406 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var TokenIterator = __webpack_require__(408);
+var TokenIterator = __webpack_require__(407);
 
 exports.Parser = function(options) {
     var parseTokens = function(parser, tokens) {
@@ -115597,7 +115494,7 @@ exports.Parser = function(options) {
 
 
 /***/ }),
-/* 408 */
+/* 407 */
 /***/ (function(module, exports) {
 
 var TokenIterator = module.exports = function(tokens, startIndex) {
@@ -115631,7 +115528,7 @@ TokenIterator.prototype.to = function(end) {
 
 
 /***/ }),
-/* 409 */
+/* 408 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //     Underscore.js 1.4.4
@@ -116863,7 +116760,7 @@ TokenIterator.prototype.to = function(end) {
 
 
 /***/ }),
-/* 410 */
+/* 409 */
 /***/ (function(module, exports) {
 
 exports.none = Object.create({
@@ -116957,7 +116854,7 @@ exports.fromNullable = function(value) {
 
 
 /***/ }),
-/* 411 */
+/* 410 */
 /***/ (function(module, exports) {
 
 var fromArray = exports.fromArray = function(array) {
@@ -117044,7 +116941,7 @@ LazyIterator.prototype.toArray = function() {
 
 
 /***/ }),
-/* 412 */
+/* 411 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var rules = __webpack_require__(217);
@@ -117178,7 +117075,7 @@ var lazyRule = function(ruleBuilder) {
 
 
 /***/ }),
-/* 413 */
+/* 412 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var Token = __webpack_require__(220);
@@ -117254,7 +117151,7 @@ function RegexTokeniser(rules) {
 
 
 /***/ }),
-/* 414 */
+/* 413 */
 /***/ (function(module, exports) {
 
 exports.paragraph = paragraph;
@@ -117335,7 +117232,7 @@ function operatorStartsWith(first, second) {
 
 
 /***/ }),
-/* 415 */
+/* 414 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var lop = __webpack_require__(216);
@@ -117371,13 +117268,13 @@ function tokenise(string) {
 
 
 /***/ }),
-/* 416 */
+/* 415 */
 /***/ (function(module, exports, __webpack_require__) {
 
 exports.readOptions = readOptions;
 
 
-var _ = __webpack_require__(2);
+var _ = __webpack_require__(3);
 
 var defaultStyleMap = exports._defaultStyleMap = [
     "p.Heading1 => h1:fresh",
@@ -117475,7 +117372,7 @@ function identity(value) {
 
 
 /***/ }),
-/* 417 */
+/* 416 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var promises = __webpack_require__(11);
@@ -117493,10 +117390,10 @@ function openZip(options) {
 
 
 /***/ }),
-/* 418 */
+/* 417 */
 /***/ (function(module, exports, __webpack_require__) {
 
-var _ = __webpack_require__(2);
+var _ = __webpack_require__(3);
 
 exports.paragraph = paragraph;
 exports.run = run;
@@ -117560,7 +117457,7 @@ function visitDescendants(element, visit) {
 
 
 /***/ }),
-/* 419 */
+/* 418 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var htmlPaths = __webpack_require__(38);
@@ -117577,7 +117474,7 @@ function element(name) {
 
 
 /***/ }),
-/* 420 */
+/* 419 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -117606,7 +117503,1865 @@ if (false) {
 }
 
 /***/ }),
+/* 420 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var disposed = false
+var normalizeComponent = __webpack_require__(2)
+/* script */
+var __vue_script__ = null
+/* template */
+var __vue_template__ = __webpack_require__(421)
+/* template functional */
+var __vue_template_functional__ = false
+/* styles */
+var __vue_styles__ = null
+/* scopeId */
+var __vue_scopeId__ = null
+/* moduleIdentifier (server only) */
+var __vue_module_identifier__ = null
+var Component = normalizeComponent(
+  __vue_script__,
+  __vue_template__,
+  __vue_template_functional__,
+  __vue_styles__,
+  __vue_scopeId__,
+  __vue_module_identifier__
+)
+Component.options.__file = "resources/js/app/pages/njoftimeburse.vue"
+
+/* hot reload */
+if (false) {(function () {
+  var hotAPI = require("vue-hot-reload-api")
+  hotAPI.install(require("vue"), false)
+  if (!hotAPI.compatible) return
+  module.hot.accept()
+  if (!module.hot.data) {
+    hotAPI.createRecord("data-v-266d15ac", Component.options)
+  } else {
+    hotAPI.reload("data-v-266d15ac", Component.options)
+  }
+  module.hot.dispose(function (data) {
+    disposed = true
+  })
+})()}
+
+module.exports = Component.exports
+
+
+/***/ }),
 /* 421 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _vm._m(0)
+}
+var staticRenderFns = [
+  function() {
+    var _vm = this
+    var _h = _vm.$createElement
+    var _c = _vm._self._c || _h
+    return _c("div", { staticClass: "container" }, [
+      _c("p"),
+      _vm._v(" "),
+      _c("p", [_c("strong", [_vm._v("NJOFTIM")])]),
+      _vm._v(" "),
+      _c("p", [
+        _c(
+          "a",
+          {
+            attrs: {
+              href:
+                "http://www.fti.edu.al/data/news/344/attach/njoftimburse20202021.docx"
+            }
+          },
+          [
+            _c("strong", [
+              _vm._v(
+                "PËR DOKUMENTACIONIN QË DUHET TË DORËZOJNË KATEGORITË E STUDENTËVE TË\n        CIKLIT TË PARË TË STUDIMEVE (BACHELOR) QË PLOTËSOJNË KRITERET PËR TË\n        PËRFITUAR BURSË"
+              )
+            ])
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [_c("strong")]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    Bazuar në Vendimin Nr. 39, datë 23.01.2019 të Këshillit të Ministrave “Për\n    disa ndryshime në VKM 903, dt. 21.12.2016 “Për përcaktimin e kritereve për\n    përfitimin e bursave nga fondi i mbështetjes studentore për studentët e\n    shkëlqyer, studentët që studiojnë në programe studimi në fushat prioritare\n    dhe studentët në nevojë”, të ndryshuar ,  njoftohen të gjithë studentët e\n    FTI-së të "
+        ),
+        _c("strong", [_vm._v("PROGRAMIT TË CIKLIT TË PARË BACHELOR")]),
+        _vm._v(
+          ", se ka\n    filluar procedura për dorëzimin e dokumentave për përfitim burse për \n    vitin akademik 2020- 2021.\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [_c("strong")]),
+      _vm._v(" "),
+      _c("ol", [
+        _c("li", [
+          _vm._v(
+            "\n      Dorëzimi i dokumentacionit do të bëhet nëpërmjet shërbimit postar në\n      adresën:\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("Fakulteti i Teknologjisë së Informacionit")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("Sheshi “Nënë Tereza”,")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("Nr.1, Tiranë")]),
+      _vm._v(" "),
+      _c("ol", [
+        _c("li", [
+          _vm._v(
+            "\n      Dokumentacioni mund të dorëzohet edhe pranë zyrës së finances, e hënë -\n      e premte, ora 09:00-12:00.\n    "
+          )
+        ]),
+        _vm._v(" "),
+        _c("li", [
+          _vm._v(
+            "\n      Bashkëlidhur gjeni formularin dhe dokumentacionin që do paraqesin\n      studentët sipas kategorive.\n    "
+          )
+        ]),
+        _vm._v(" "),
+        _c("li", [
+          _vm._v(
+            "\n      Studentët duhet të dorëzojnë me dokumentacionin dhe nr. personal të\n      llogarisë bankare.\n    "
+          )
+        ]),
+        _vm._v(" "),
+        _c("li", [
+          _vm._v(
+            "\n      Dokumentacioni të jetë origjinal ose i noterizuar (përveç\n      dokumentacionit të marrë nga e-albania).\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("ul", [
+        _c("li", [
+          _c("strong", [_vm._v("Studentët me mesatare 9 (nëntë) -10 (dhjetë)")])
+        ]),
+        _vm._v(" "),
+        _c("li", [
+          _vm._v(
+            "\n       Studentët e pranuar në vitin e parë akakdemik “Bachelor” 2020-2021 me\n      notë mesatare 9 (nëntë) -10 (dhjetë), listat e këtyre studentëve në bazë\n      të notës mesatare përkatëse do të përcillen nga Qendra e Shërbimeve\n      Arsimore.\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    Këta studentë duhet të dërgojnë me shërbimin postar vetëm fotokopje të\n    kartës së identitëtit dhe nr personal bankar.\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("ul", [
+        _c("li", [
+          _vm._v(
+            "\n      Studentët që ndjekin studimet, në vitet pas të parit, të cilët kanë\n      shlyer të gjitha detyrimet e vitit paraardhës akademik, me notë mesatare\n      vjetore e ponderuar nga 9 (nëntë) deri në 10 (dhjetë) përgatiten nga\n      insitucioni (sekretaria mësimore).\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    Këta studentë duhet të dërgojnë me shërbimin postar vetëm fotokopje të\n    kartës së identitetit dhe nr personal banker.\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "Bursa financiare paguhet nga data e regjistrimit në rastet e aplikimit\n      në fillim të vitit akademik. Për fazat e tjera, bursa financiare paguhet\n      nga muaji pasardhës, kur studenti ka paraqitur kërkesën dhe përfitojnë\n      vetëm ata studente që plotësojnë kriteret e përcaktuara në këtë vendim\n      gjatë vitit akademik 2020 - 2021."
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [_c("strong", [_vm._v("Tiranë, më ____ / ____ / 202__")])]),
+      _vm._v(" "),
+      _c("p", [_c("strong")]),
+      _vm._v(" "),
+      _c("p", [_c("strong", [_vm._v("FORMULAR APLIKIMI PËR PËRFITIM BURSE")])]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "1. Emër Mbiemër __________________________________________\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "2. Atësia _________________________________________________\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "3. Datëlindja ______________________________________________\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "4. Nr.ID__________________________________________________\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "5. Program Studimi /Profili____________________________________\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "6. Kursi/grupi ______________________________________________\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "7. Nr.telefoni_______________________________________________\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            'Unë______________________________, student në Fakultetin e Teknologjisë\n      së Informacionit paraqes kërkesën për të përfituar bursë për vitin\n      akademik 2020-2021, pasi plotësoj kushtet e përcaktuara nga Vendimet e\n      Këshillit të Ministrave nr. 39, datë 23.01.2019, "Për disa ndryshime dhe\n      shtesa në VKM nr. 903, datë 21.12.2016".\n    '
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "Deklaroj se në të dhënat e paraqitura nga ana ime si dhe dokumentacioni\n      shoqërues që provon plotësimin e njërit prej kritereve të renditura në\n      vijim të kërkesës time, të nënvizuara me shenjën X përbri kriterit.\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "I gjithë dokumentacioni i paraqitur është dokumentacion zyrtar dhe i\n      marrë nga instuticione shtetërore dhe/ose të njohura me ligj.\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "Jam në dijeni se deklarimet e rreme nga ana ime në këtë kërkesë, si dhe\n      paraqitja e dokumentave të falsifikuara, përveç përgjegjësisë penale,\n      sjellin automatikisht edhe heqjen e së drejtës për të përfituar bursë.\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "Dokumentat shoqëruese janë origjinale ose kopje të noterizuara.\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [_vm._v("________________________________________ ")])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [_vm._v("(Emër Mbiemër, Nënshkrimi i kërkuesit)")])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v("KRITERET PËR TË PËRFITUAR BURSË PËR VITIN AKADEMIK 2020-2021")
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [_c("strong")]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    Në zbatim të V.K.M-së Nr. 39 datë 23.01.2019 “Për disa ndryshime në VKM-në\n    903, datë 21.12.2016”, njoftojmë se ka filluar aplikimi për studentët e\n    ciklit të parë për përfitimin e bursave për vitin akademik 2020- 2021,\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    Dokumentat që duhet të dorëzojnë studentët sipas kategorive janë si më\n    poshtë:\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "a) Studentet, familjet e të cilëve trajtohen me ndihmë ekonomike:\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v("Për këtë kategori dokumentat që duhet të plotësohen janë:")
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("1.Çertifikate familjare,")]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v("\n    2.\n    "),
+        _c("strong", [
+          _vm._v(
+            "Vërtetim nga Njësia Administrative në lidhje me masën e ndihmës\n      ekonomike "
+          )
+        ]),
+        _vm._v(
+          "që përfiton familja. Vërtetimi i ndihmës ekonomike duhet të ketë të\n    shënuar "
+        ),
+        _c("strong", [_vm._v("numrin e dosjes ")]),
+        _vm._v("dhe të jetë shënuar qartë\n    "),
+        _c("strong", [
+          _vm._v("shuma e ndihmës ekonomike (me shifra dhe me fjalë")
+        ]),
+        _vm._v("), si\n    dhe "),
+        _c("strong", [
+          _vm._v("masa e ndihmës ekonomike (e plotë ose e pjesshme)")
+        ]),
+        _vm._v(
+          ".\n    Vërtetimi duhet të jetë me numër protokolli, të jetë nënshkruar nga\n    përgjegjësi i seksionit të ndihmës ekonomike dhe kryetari i njësisë së\n    vetëqeverisjes vendore dhe të jetë i vulosur. (Njëkohësisht në vërtetim\n    duhet të jetë e shënuar qartë adresa e Njësisë së qeverisjes vendore që e\n    ka lëshuar për efekt të verifikimit të mëtejshëm)\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("3. Fotokopje të kartës së ID të vetë studentit.")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("4. Formulari i kërkesë për t’u trajtuar me bursë.")]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "b) Bashkëshortët që kanë fëmijë dhe janë të dy studentë, përfitojnë\n      secili burse Financiare:\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v("Për këtë kategori dokumentat që duhet të plotësohen janë:")
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("1. Formulari i kërkesë për t’u trajtuar me bursë.")]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    2. Vërtetim studenti nga institucionet publike IAL për secilin prej tyre.\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("3. Çertifikatë familjare.")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("4. Fotokopje të kartës së ID të vetë studentit.")]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "c) Studentët, persona me aftësi të kufizuara, të vërtetuar nga\n      Komisioni Mjekësor i Caktimit të Aftësisë për Punë, përfitues të pagesës\n      së aftësisë së kufizuar:\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v("Për këtë kategori dokumentat që duhet të plotësohen janë:")
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("1. Formulari i kërkesë për t’u trajtuar me bursë.")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("2. Çertifikatë familjare.")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("3. Fotokopje e kartës së identitetit;")]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    4. Vërtetim origjinal (ose kopje e noterizuar) të lëshuar nga KMCAP\n    (Komisioni Mjekësor i Caktimit të Aftësisë për Punë) për studentin me\n    aftësi të kufizuar;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    5. Vërtetimi për pagesën e aftësisë së kufizuar të lëshuar nga zyrat\n    përkatëse (nga Instituti i Sigurimeve Shoqërore apo nga zyrat e ndihmes\n    ekonomike në Bashki)\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "ç) Studentët që i kanë të dy prindërit me aftësi të kufizuara, të\n      vërtetuar me vendim të Komisionit Mjekësor të Caktimit të Aftësisë për\n      Punë, përfitues të pagesës së aftësisë së kufizuar\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v("Për këtë kategori dokumentat që duhet të plotësohen janë:")
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("1. Formulari i kërkesë për t’u trajtuar me bursë.")]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    2. Kopje origjinale ose e noterizuar e Vërtetimit të KMCAP-së (Komsionit\n    të caktimit të aftësisë për punë) për të dy prindërit me aftësi të\n    kufizuar ( invalid pune, invalid paraplegjik, invalid tetraplegjik).\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    3. Vërtetim origjinal të institutit të sigurimeve shoqërore për pagesën e\n    pensionit të invaliditetit ose nga Nj"
+        ),
+        _c("strong", [_vm._v("ë")]),
+        _vm._v(
+          "sia administrative\n    vërtetimin e pagësë së paaftësisë për punë (për të dy prindërit)\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    4. Çertifikatë Familjare që vërteton lidhjen e studentit me invalidin e\n    punës/ invalidin paraplegjik ose tetraplegjik;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("5. Fotokopje të kartës së ID të vetë studentit.")]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v("d/1) Studentët që i kanë të dy prindërit pensionistë ")
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("1. Formulari i kërkesë për t’u trajtuar me bursë.")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("2. Çertifikatë Familjare.")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("3. Fotokopje të kartës së ID të vetë studentit")]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    4. Vërtetim origjinal të institutit të sigurimeve shoqërore për pagesën e\n    pensionit të pleqërisë për prindin/ të dy prindërit.\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "d/2) Studentët që e kanë të njërin prind pensionist dhe prindi tjetër\n      nuk jeton\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("1. Formulari i kërkesë për t’u trajtuar me bursë.")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("2. Çertifikatë Familjare.")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("3. Fotokopje të kartës së ID të vetë studentit")]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    4. Vërtetim origjinal të institutit të sigurimeve shoqërore për pagesën e\n    pensionit të pleqërisë të prindërit që jeton;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("5. Çertifikatë vdekjeje për prindin që nuk jeton;")]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "dh) Studentët, të tretët në radhën e fëmijëve e lart, të cilët vijnë\n      nga familje me tre fëmijë e më shumë, nga të cilët dy të parët janë\n      studentë në institucionet publike të arsimit të lartë:\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v("Për këtë kategori dokumentat që duhet të plotësohen janë:")
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("1. Formulari i kërkesë për t’u trajtuar me bursë.")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("2. Vërtetim studenti.")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("3. Çertifikatë Familjare.")]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "4. Vërtetim për të dy fëmijët e parë që janë student në IAL Publike."
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "d) Studentët që kanë përfituar statusin e jetimit, deri në moshën 25\n      vjec(sipas Ligjit Nr. 8153, date 30.10.1996)\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "1. Çertifikatë Familjare dhe fotokopje e kartës së identitetit;"
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("2. Çertifikatën e vdekjes së dy prindërve;")]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    3. Fotokopje e noterizuar e statusit të jetimit të përfituar nga Ministria\n    e Mirëqënies Sociale dhe Rinisë;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "e) Studentët që kanë humbur përgjegjësinë prindërore, me vendim gjykate\n      të formës së prerë;\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("1. Çertifikatë Familjare")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("2. Fotokopje e kartës së identitetit;")]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    3. Vendim gjykate i formës së prerë që studenti ka humbur përgjegjësinë\n    prindërore (nga të dy prindërit);\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "f) Studentët që janë identifikuar e trajtuar si viktima të trafikut të\n      qenieve njerëzore dhe kanë humbur kujdesin prindëror\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "1. Çertifikatë Familjare dhe fotokopje e kartës së identitetit;"
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    2. Vendim gjykate i formës së prerë që kanë humbur kujdesin prindëror;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    3. Vërtetim nga Ministria e Mirëqënies Sociale ose Ministria e Brendshme\n    që kanë përfituar statusin ligjor për trajtim si viktima të trafikut të\n    qenieve njerëzore;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "g) Studentët që rezultojnë fëmijë të punonjësve të Policisë së Shtetit,\n      të Gardës së Republikës, të Shërbimit të Kontrollit të Brendshëm, të\n      Policisë së Mbrojtjes nga Zjarri dhe të Shpëtimit, të Forcave të\n      Armatosura, të Shërbimit Informativ Shtetëror dhe të Policisë së\n      Burgjeve që kanë humbur jetën në krye dhe për shkak të detyrës.\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "1. Çertifikatë Familjare dhe fotokopje e kartës së identitetit;"
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    2. Çertifikatë vdekje e prindit që ka humbur jetën në krye dhe për shkak\n    të detyrës;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("3. Vërtetim nga Ministria përkatëse;")])
+    ])
+  }
+]
+render._withStripped = true
+module.exports = { render: render, staticRenderFns: staticRenderFns }
+if (false) {
+  module.hot.accept()
+  if (module.hot.data) {
+    require("vue-hot-reload-api")      .rerender("data-v-266d15ac", module.exports)
+  }
+}
+
+/***/ }),
+/* 422 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var disposed = false
+var normalizeComponent = __webpack_require__(2)
+/* script */
+var __vue_script__ = null
+/* template */
+var __vue_template__ = __webpack_require__(423)
+/* template functional */
+var __vue_template_functional__ = false
+/* styles */
+var __vue_styles__ = null
+/* scopeId */
+var __vue_scopeId__ = null
+/* moduleIdentifier (server only) */
+var __vue_module_identifier__ = null
+var Component = normalizeComponent(
+  __vue_script__,
+  __vue_template__,
+  __vue_template_functional__,
+  __vue_styles__,
+  __vue_scopeId__,
+  __vue_module_identifier__
+)
+Component.options.__file = "resources/js/app/pages/perjashtimtarifec1.vue"
+
+/* hot reload */
+if (false) {(function () {
+  var hotAPI = require("vue-hot-reload-api")
+  hotAPI.install(require("vue"), false)
+  if (!hotAPI.compatible) return
+  module.hot.accept()
+  if (!module.hot.data) {
+    hotAPI.createRecord("data-v-54bbe712", Component.options)
+  } else {
+    hotAPI.reload("data-v-54bbe712", Component.options)
+  }
+  module.hot.dispose(function (data) {
+    disposed = true
+  })
+})()}
+
+module.exports = Component.exports
+
+
+/***/ }),
+/* 423 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _vm._m(0)
+}
+var staticRenderFns = [
+  function() {
+    var _vm = this
+    var _h = _vm.$createElement
+    var _c = _vm._self._c || _h
+    return _c("div", { staticClass: "container" }, [
+      _c("p", [_c("strong", [_vm._v("NJOFTIM")])]),
+      _vm._v(" "),
+      _c("p", [
+        _c(
+          "a",
+          {
+            attrs: {
+              href:
+                "http://fshs-ut.edu.al/per-dokumentacionin-qe-duhet-te-dorezojne-kategorite-e-studenteve-te-ciklit-te-pare-te-studimeve-bachelor-qe-plotesojne-kriteret-per-perjashtim-nga-tarifa-vjetore-e-shkollimit/"
+            }
+          },
+          [
+            _c("strong", [
+              _c("p", [
+                _vm._v(
+                  "\n          PËR DOKUMENTACIONIN QË DUHET TË DORËZOJNË KATEGORITË E STUDENTËVE TË\n          CIKLIT TË PARË TË STUDIMEVE (BACHELOR) QË PLOTËSOJNË KRITERET PËR\n          PËRJASHTIM NGA TARIFA VJETORE E SHKOLLIMIT\n        "
+                )
+              ])
+            ])
+          ]
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    Bazuar në Vendimin Nr. 40, datë 23.01.2019, VKM Nr.251, datë 27.03.2020,\n    të Këshillit të Ministrave “ Për disa ndryshime dhe shtesa në Vendimin Nr.\n    269, datë 29.03.2017 të Këshillit të Ministrave “Për përcaktimin e\n    kategorive të individëve që plotësojnë kriteret e pranimit në një program\n    të ciklit të parë të studimeve, në një program të integruar të studimeve\n    ose në një program të studimeve profesionale, në pamundësi financiare për\n    të mbuluar tarifat vjetore të shkollimit”, të ndryshuar , njoftohen të\n    gjithë studentët e FTI-së të programit të ciklit të parë Bachelor, se ka\n    filluar procedura për dorëzimin e dokumentave për përjashtimin nga tarifa\n    vjetore e shkollimit  për  vitin akademik 2020- 2021.\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("ol", [
+        _c("li", [
+          _vm._v(
+            "\n      Dorëzimi i dokumentacionit do të bëhet nëpërmjet shërbimit postar në\n      adresën:\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("Fakulteti i Teknologjisë së Informacionit")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("Sheshi “Nënë Tereza”,")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("Nr.1, Tiranë")]),
+      _vm._v(" "),
+      _c("ol", [
+        _c("li", [
+          _vm._v(
+            "\n      Dokumentacioni mund të dorëzohet edhe pranë zyrës së finances, e hënë -\n      e premte, ora 09:00-12:00.\n    "
+          )
+        ]),
+        _vm._v(" "),
+        _c("li", [
+          _vm._v(
+            "\n      Bashkëlidhur gjeni formularin dhe dokumentacionin që do paraqesin\n      studentët sipas kategorive.\n    "
+          )
+        ]),
+        _vm._v(" "),
+        _c("li", [
+          _vm._v(
+            "\n      Dokumentacioni të jetë origjinal ose i noterizuar (përveç\n      dokumentacionit të marrë nga e-albania).\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("ul", [
+        _c("li", [
+          _c("strong", [
+            _vm._v("Studentët me mesatare 9 (nëntë) - 10 (dhjetë)")
+          ])
+        ]),
+        _vm._v(" "),
+        _c("li", [
+          _vm._v(
+            "\n       Studentët e pranuar në vitin e parë akakdemik “Bachelor” 2019-2020 me\n      notë mesatare 9 (nëntë) -10 (dhjetë) nuk do të paraqesin asnjë\n      dokumentacion , pasi listat e këtyre studentëve në bazë të notës\n      mesatare përkatëse do të përcillet nga Qendra e Shërbimeve Arsimore.\n    "
+          )
+        ]),
+        _vm._v(" "),
+        _c("li", [
+          _vm._v(
+            "\n      Studentët që ndjekin studimet, në vitet pas të parit, të cilët kanë\n      shlyer të gjitha detyrimet e vitit paraardhës akademik, me notë mesatare\n      vjetore e ponderuar nga 9 (nëntë) deri në 10 (dhjetë) përgatiten nga\n      institucioni (Sekretaria mësimore).\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [_c("strong", [_vm._v("Tiranë, më ____.____. ")])]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v("FORMULAR APLIKIMI PËR PËRJASHTIM NGA TARIFA E SHKOLLIMIT")
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "1. Emër Mbiemër __________________________________________\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "2. Atësia _________________________________________________\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "3. Datëlindja ______________________________________________\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "4. Nr. ID__________________________________________________\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "5. Program Studimi /Profili____________________________________\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "6. Kursi/grupi ______________________________________________\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "7. Nr. telefoni_______________________________________________\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            'Unë _____________________________, student në Fakultetin e Teknologjise\n      së Informacionit paraqes kërkesën për përjashtimin nga tarifa e\n      shkollimit për vitin akademik 2020-2021, pasi plotësoj kushtet e\n      përcaktuara nga Vendimet e Këshillit të Ministrave nr. 40, datë\n      23.01.2019, "Për disa ndryshime dhe shtesa në VKM nr. 269, datë\n      29.03.2017",VKM 251 datë 27.03.2020, që rregullojnë tarifat vjetore të\n      shkollimit në IAL Publike.\n    '
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "Deklaroj, se në të dhënat e paraqitura nga ana ime, si dhe\n      dokumentacioni shoqërues që provon plotësimin e njërit prej kritereve të\n      renditura në vijim të kërkesës time, të nënvizuara me shenjën X përbri\n      kriterit.\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "I gjithë dokumentacioni i paraqitur është dokument zyrtar dhe janë\n      marrë nga instuticione shtetërore dhe/ose të njohura me ligj.\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "Jam në dijeni se deklarimet e rreme nga ana ime në këtë kërkesë si dhe\n      paraqitja e dokumentave të falsifikuara, përveç përgjegjësisë penale,\n      sjellin automatikisht edhe heqjen e së drejtës për përfitim nga\n      përjashtimi i tarifës së shkollimit.\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "Dokumentat shoqëruese janë origjinale ose kopje të noterizuara.\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [_vm._v("________________________________________ ")])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [_vm._v("(Emër Mbiemër, Nënshkrimi i kërkuesit)")])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("a", { attrs: { id: "_Hlk56513285" } }),
+        _c("strong", [
+          _vm._v(
+            "KRITERET PËR PËRFITIMIN E PËRJASHTIMIT NGA TARIFA VJETORE E SHKOLLIMIT,\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [_c("strong", [_vm._v("VITI AKADEMIK 2020-2021. ")])]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    Në zbatim të V.K.M-së Nr. 40, datë 23.01.2019, “Për disa ndryshime dhe\n    shtesa në VKM 269, dt.29.03.2017”, VKM Nr.251, datë 27.03.2020, njoftojmë\n    se ka filluar aplikimi për studentët e ciklit të parë të kategorive që\n    përfitojnë përjashtim nga tarifa e shkollimit të vitit akademik 2020-\n    2021,\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "Dokumentat që duhet të dorëzojnë studentët sipas kategorive janë si më\n      poshtë:\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "i. Studentët, familjet e të cilëve trajtohen me ndihmë ekonomike:\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v("Për këtë kategori dokumentat që duhet të plotësohen janë:")
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("1. Çertifikatë familjare.")]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    2. Vërtetim nga Njesia Administrative në lidhje me masën e ndihmës\n    ekonomike që përfiton familja. Vërtetimi i ndihmës ekonomike duhet të ketë\n    të shënuar numrin e dosjes dhe të jetë shënuar qartë shuma e ndihmës\n    ekonomike (me shifra dhe me fjalë), si dhe masa e ndihmës ekonomike (e\n    plotë ose e pjesshme). Vërtetimi duhet të jetë me numër protokolli, të\n    jetë nënëshkruar nga përgjegjegjësi i seksionit të ndihmës ekonomike dhe\n    kryetari i njësisë së vetëqeverisjes vendore dhe të jetë i vulosur.\n    (Njëkohësisht në vërtetim duhet të jetë e shënuar qartë adresa e Njësisë\n    së qeverisjes vendore që e ka lëshuar për efekt të verifikimit të\n    mëtejshëm)\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("3. Fotokopje të kartës së ID të vetë studentit.")]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "ii. Bashkëshortët që kanë fëmijë dhe janë të dy studentë, përfitojnë\n      secili burse Financiare:\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v("Për këtë kategori dokumentat që duhet të plotësohen janë:")
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    1. Vërtetim studenti nga institucionet publike IAL për secilin prej tyre.\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("2. Çertifikatë familjare.")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("3. Fotokopje të kartës së ID të vetë studentit.")]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "iii. Studentët, persona me aftësi të kufizuara, të vërtetuar nga\n      Komisioni Mjekësor i Caktimit të Aftësisë për Punë, përfitues të pagesës\n      së aftësisë së kufizuar:\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v("Për këtë kategori dokumentat që duhet të plotësohen janë:")
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("1. Çertifikatë familjare.")]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "2. Çertifikatë Familjare dhe fotokopje e kartës së identitetit;"
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    3. Vërtetim original (ose kopje e noterizuar) të lëshuar nga KMCAP(\n    Komisioni Mjekësor i Caktimit të Aftësisë për Punë) për studentin me\n    aftësi të kufizuar;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    4. Vërtetimi për pagesën e aftësisë së kufizuar të lëshuar nga zyrat\n    përkatëse (nga Instituti i Sigurimeve Shoqërore apo nga zyrat e ndihmës\n    ekonomike në Bashki)\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "iv. Studentët të cilët kanë, të paktën, njërin prind persona me aftësi\n      të kufizuar, të vërtetuar me vendim të Komisionit Mjekësor të Caktimit\n      të Aftësisë për Punë, përfitues të pagesës së aftësisë së kufizuar\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v("Për këtë kategori dokumentat që duhet të plotësohen janë:")
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    1. Kopje origjinale ose e noterizuar e Vërtetimit të KMCAP-së ( Komsionit\n    të caktimit të aftësisë për punë) për të dy prindërit me aftësi të\n    kufizuar ( invalid pune, invalid paraplegjik, invalid tetraplegjik).\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    2. Vërtetim origjinal të institutit të sigurimeve shoqërore për pagesën e\n    pensionit të invaliditetit ose nga Njesia administrative vërtetimin e\n    pagësë së paaftësisë për punë( për të dy prindërit)\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    3. Çertifikatë Familjare që vërteton lidhjen e studentit me invalidin e\n    punës/ invalidin paraplegjik ose tetraplegjik;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("4. Fotokopje të kartës së ID të vetë studentit.")]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v("v. /1 Studentët që i kanë të dy prindërit pensionistë ")
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("1. Çertifikatë Familjare.")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("2. Fotokopje të kartës së ID të vetë studentit")]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    3. Vërtetim origjinal të institutit të sigurimeve shoqërore për pagesën e\n    pensionit të pleqërisë për prindin/ të dy prindërit.\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "v./2 Studentët që e kanë të njërin prind pensionist dhe prindi tjetër\n      nuk jeton\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [_vm._v("1. ")]),
+        _vm._v("Çertifikatë Familjare.")
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("2. Fotokopje të kartës së ID të vetë studentit")]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    3. Vërtetim origjinal të institutit të sigurimeve shoqërore për pagesën e\n    pensionit të pleqërisë të prindërit që jeton;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("4. Çertifikatë vdekjeje për prindin që nuk jeton;")]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "vi. Studentët, të tretët në radhën e fëmijëve e lart, të cilët vijnë\n      nga familje me tre fëmijë e më shumë, nga të cilët dy të parët janë\n      studentë në institucionet publike të arsimit të lartë:\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "Për këtë kategori dokumentat që duhet të plotësohen janë:\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("1. Vërtetim studenti.")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("2. Çertifikatë Familjare.")]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "3. Vërtetim për të dy fëmijët e parë që janë student në IAL Publike."
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "vii. Studentët që kanë përfituar statusin e jetimit, deri në moshën 25\n      vjeç (sipas Ligjit Nr. 8153, datë 30.10.1996)\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "1. Çertifikatë Familjare dhe fotokopje e kartës së identitetit;"
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("2. Çertifikatën e vdekjes së dy prindërve;")]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    3. Fotokopje e noterizuar e statusit të jetimit të përfituar nga Ministria\n    e mirëqënies sociale dhe rinisë;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "viii. Studentët që kanë humbur përgjegjësinë prindërore, me vendim\n      gjykate të formës së prerë;\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("1. Çertifikatë Familjare")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("2. Fotokopje e kartës së identitetit;")]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    3. Vendim gjykate i formës së prerë që studenti ka humbur përgjegjësinë\n    prindërore (nga të dy prindërit);\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "ix. Studentët që janë identifikuar e trajtuar si viktima të trafikut të\n      qenieve njerëzore dhe kanë humbur kujdesin prindëror\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "1. Çertifikatë Familjare dhe fotokopje e kartës së identitetit;"
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    2. Vendim gjykate i formës së prerë që kanë humbur kujdesin prindëror;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    3. Vërtetim nga Ministria e Mirëqënies Sociale ose Ministria e Brendshme\n    që kanë përfituar statusin ligjor për trajtim si viktima të trafikut të\n    qenieve njerëzore;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "x. Studentët që rezultojnë fëmijë të punonjësve të Policisë së Shtetit,\n      të Gardës së Republikës, të Shërbimit tëKontrollit të Brendshëm, të\n      Policisë së Mbrojtjes nga Zjarri dhe të Shpëtimit, të Forcave të\n      Armatosura, të ShërbimitInformativ Shtetëror dhe të Policisë së Burgjeve\n      që kanë humbur jetën në krye dhe për shkak të detyrës.\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "1. Çertifikatë Familjare dhe fotokopje e kartës së identitetit;"
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    2. Çertifikatë vdekje e prindit që ka humbur jetën në krye dhe për shkak\n    të detyrës;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("3. Vërtetim nga Ministria përkatëse;")]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "xi. Studentët romë dhe ballkano-egjiptianët, të konfirmuar si të tillë\n      nga ministria përgjegjëse për mirëqenien sociale;\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("1. Fotokopje e kartës së identitetit;")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("2. Vërtetim anëtarësie në shoqatën përkatëse;")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("3. Vetëdeklarim ;")]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "xii. Studentët fëmijë të ish-të dënuarve dhe të përndjekurve politikë\n      nga sistemi komunist ose fëmijë me prindër të dënuar politikë me heqje\n      lirie;\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    1. Çertifikatë Familjare që vërteton lidhjen e studentit me prindin të\n    ish-të dënuarve dhe të përndjekurve politikë nga sistemi komunist ose\n    fëmijë me prindër të dënuar politikë me heqje lirie;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "2. Vëretimi i statusit të prindit ish të përndjekur/ dënuar politik;"
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    3. Dëshmi penaliteti për prindin ish të përndjekur politik ose vërtetim\n    për kohën e dënimit të lëshuar nga ministria e punëve të brendshme.\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [_c("strong")])
+    ])
+  }
+]
+render._withStripped = true
+module.exports = { render: render, staticRenderFns: staticRenderFns }
+if (false) {
+  module.hot.accept()
+  if (module.hot.data) {
+    require("vue-hot-reload-api")      .rerender("data-v-54bbe712", module.exports)
+  }
+}
+
+/***/ }),
+/* 424 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var disposed = false
+var normalizeComponent = __webpack_require__(2)
+/* script */
+var __vue_script__ = null
+/* template */
+var __vue_template__ = __webpack_require__(425)
+/* template functional */
+var __vue_template_functional__ = false
+/* styles */
+var __vue_styles__ = null
+/* scopeId */
+var __vue_scopeId__ = null
+/* moduleIdentifier (server only) */
+var __vue_module_identifier__ = null
+var Component = normalizeComponent(
+  __vue_script__,
+  __vue_template__,
+  __vue_template_functional__,
+  __vue_styles__,
+  __vue_scopeId__,
+  __vue_module_identifier__
+)
+Component.options.__file = "resources/js/app/pages/reduktimtarifec2.vue"
+
+/* hot reload */
+if (false) {(function () {
+  var hotAPI = require("vue-hot-reload-api")
+  hotAPI.install(require("vue"), false)
+  if (!hotAPI.compatible) return
+  module.hot.accept()
+  if (!module.hot.data) {
+    hotAPI.createRecord("data-v-b87c4d0c", Component.options)
+  } else {
+    hotAPI.reload("data-v-b87c4d0c", Component.options)
+  }
+  module.hot.dispose(function (data) {
+    disposed = true
+  })
+})()}
+
+module.exports = Component.exports
+
+
+/***/ }),
+/* 425 */
+/***/ (function(module, exports, __webpack_require__) {
+
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _vm._m(0)
+}
+var staticRenderFns = [
+  function() {
+    var _vm = this
+    var _h = _vm.$createElement
+    var _c = _vm._self._c || _h
+    return _c("div", { staticClass: "container" }, [
+      _c("p", [_c("strong", [_vm._v("NJOFTIM")])]),
+      _vm._v(" "),
+      _c("p", [
+        _c("a", {
+          attrs: {
+            href:
+              "http://www.fti.edu.al/data/news/346/attach/cikli_2_reduktim_tarife_2020_2021.docx"
+          }
+        }),
+        _c("strong", [
+          _vm._v(
+            "\n      PËR DOKUMENTACIONIN QË DUHET TË DORËZOJNË KATEGORITË E STUDENTËVE TË\n      CIKLIT TË DYTË TË STUDIMEVE (MASTER SHKENCOR DHE MASTER PROFESIONAL) QË\n      PLOTËSOJNË KRITERET PËR ULJE TË TARIFËS VJETORE TË STUDIMEVE."
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v("\n    Bazuar në "),
+        _c("strong", [_vm._v("V.K.M Nr. 780, dt. 26.12.2018,")]),
+        _vm._v(
+          " njoftohen të\n    gjithë studentët e FTI-së se ka filluar procedura për dorëzimin e\n    dokumentave për  vitin akademik 2020- 2021, që duhet të dorëzojnë\n    studentët e kategorive sociale në ciklin e dytë (Master Shkencor dhe\n    Master Profesional) për të përfituar ulje të tarifës vjetore të studimit\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p"),
+      _vm._v(" "),
+      _c("ol", [
+        _c("li", [
+          _vm._v(
+            "\n      Dorëzimi i dokumentacionit do të bëhet nëpërmjet shërbimit postar në\n      adresën:\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("Fakulteti i Teknologjisë së Informacionit")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("Sheshi “Nënë Tereza”,")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("Nr.1, Tiranë")]),
+      _vm._v(" "),
+      _c("ol", [
+        _c("li", [
+          _vm._v(
+            "\n      Dokumentacioni mund të dorëzohet edhe pranë zyrës së financës: nga e\n      hënë - e premte, ora 09:00-12:00.\n    "
+          )
+        ]),
+        _vm._v(" "),
+        _c("li", [
+          _vm._v(
+            "\n      Bashkëlidhur gjeni formularin dhe dokumentacionin që do paraqesin\n      studentët sipas kategorive.\n    "
+          )
+        ]),
+        _vm._v(" "),
+        _c("li", [
+          _vm._v(
+            "\n      Dokumentacioni të jetë origjinal ose i noterizuar (përveç\n      dokumentacionit të marrë nga e-albania).\n    "
+          )
+        ]),
+        _vm._v(" "),
+        _c("li", [
+          _c("strong", [
+            _vm._v(
+              "Afati i aplikimit për reduktim tarife për studentët që ndjekin\n        studimet në një program të ciklit të dytë të studimeve është brenda\n        muajit dhjetor 2020."
+            )
+          ])
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [_c("strong", [_vm._v("Tiranë, më ____ / ____ / 202__")])]),
+      _vm._v(" "),
+      _c("p", [_c("strong")]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "FORMULAR APLIKIMI PËR PËR ULJE TË TARIFËS VJETORE TË STUDIMEVE."
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "1. Emër Mbiemër __________________________________________\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "2. Atësia _________________________________________________\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "3. Datëlindja ______________________________________________\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "4. Nr. ID__________________________________________________\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "5. Program Studimi /Profili____________________________________\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "6. Kursi/grupi ______________________________________________\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "7. Nr. telefoni_______________________________________________\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "Unë____________________________, student në Fakultetin e Teknologjisë\n      së Informacionit, paraqes kërkesën për të përfituar ulje të tarifës\n      vjetore të studimeve për vitin akademik 2020-2021, pasi plotësoj kushtet\n      e përcaktuara nga Vendimi i Këshillit të Ministrave\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [_c("strong", [_vm._v("Nr. 780, dt. 26.12.2018.")])]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "Deklaroj se në të dhënat e paraqitura nga ana ime, si dhe\n      dokumentacioni shoqërues që provon plotësimin e njërit prej kritereve të\n      renditura në vijim të kërkesës time, të nënvizuara me shenjën X përbri\n      kriterit.\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "I gjithë dokumentacioni i paraqitur është dokumentacion zyrtar dhe i\n      marrë nga institucione shtetërore dhe/ose të njohura me ligj.\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "Jam në dijeni se deklarimet e rreme nga ana ime në këtë kërkesë, si dhe\n      paraqitja e dokumentave të falsifikuara, përveç përgjegjësisë penale,\n      sjellin automatikisht edhe heqjen e së drejtës për të përfituar bursë.\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "Dokumentat shoqëruese janë origjinale ose kopje të noterizuara.\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [_vm._v("________________________________________ ")])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [_vm._v("(Emër Mbiemër, Nënshkrimi i kërkuesit)")])
+      ]),
+      _vm._v(" "),
+      _c("p"),
+      _vm._v(" "),
+      _c("p", [_c("strong")]),
+      _vm._v(" "),
+      _c("p", [_c("strong", [_vm._v("NJOFTIM")])]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "KRITERET PËR ULJE TË TARIFËS VJETORE TË STUDIMEVE NË CIKLIN E DYTË,\n      VITI AKADEMIK 2020-2021."
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v("\n    Bazuar në "),
+        _c("strong", [_vm._v("V.K.M Nr. 780, dt. 26.12.2018")]),
+        _vm._v(
+          ", dokumentacioni\n    që duhet të dorëzojnë studentët e kategorive sociale në ciklin e dytë\n    (Master Shkencor dhe Master Profesional) për të përfituar ulje të tarifës\n    vjetore të studimit është si vijon:\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "1/ a ) Studentët me aftësi të kufizuara, të vërtetuar me vendim të\n      Komisionit Mjekësor të Caktimit të Aftësisë për Punë, Studentë që nuk\n      shikojnë ( Verbër)/ tetraplegjikë/ paraplegjikë/ me aftësi të kufizuar )\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    a) Fotokopje të noterizuar të Vërtetimit të K.M.P.V-së (Komisionit të\n    përcaktimit të verbërisë) ose të Vërtetimit të K.M.C.A.P-së (Komisionit të\n    caktimit të aftësisë për punë)\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    a) Vertetimi origjinal nga njësia e vetëqeverisjes vendore për masën e\n    pagesës së verbërisë/ paaftësisë që merr studenti;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    b) Vërtetimi nga shoqata e të verbërve të Shqipërisë ose nga shoqata\n    përkatëse;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    c) Fotokopje e noterizuar e Librezës së Verbërisë/ Fotokopje e noterizuar\n    e statusit të paraplegjikut/ teraplegjikut;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    d) Çertifikatë Familjare dhe fotokopje e kartës së identitetit të\n    studentit;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "1/a) Studentët fëmijë të personave/familjes me aftësi të kufizuara, të\n      vërtetuar me vendim të KMCA-së për punë, familjet e të cilëve\n      trajtohen/përfitojnë nga ligji nr. 9355, datë 10.3.2005, “Për ndihmën\n      dhe shërbimet shoqërore”, të ndryshuar, ndihmë ekonomike të plotë apo të\n      pjesshme nga njësitë e vetëqeverisjes vendore;\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    a) Kopje origjinale ose e noterizuar e VëRtetimit të KMCAP-së (Komsionit\n    të caktimit të aftësisë për punë) për studentin me prindër me aftësi të\n    kufizuar (invalid pune, invalid paraplegjik, invalid tetraplegjik );\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    b) Vërtetim që lëshon shoqata e invalidëve të punës së rrethit përkatës së\n    bashku me fotokopjen me vulë të njomë të Dëshmisë së Invalidit të Punës të\n    përfituar sipas statusit të invalidit të punës;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    c) Vërtetim origjinal të institutit të sigurimeve shoqërore për pagesën e\n    pensionit të invaliditetit;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v("\n    d) Vërtetim nga njësia e vetëqeverisjes vendore\n    "),
+        _c("strong", [
+          _vm._v(
+            "për masën e ndihmës ekonomike të plotë apo të pjesshme që përfiton\n      familja e studentit;\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    e) Çertifikatë Familjare që vërteton lidhjen e studentit me invalidin e\n    punës/ invalidin paraplegjik ose tetraplegjik;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    f) Fotokopje të kartës së identitetit të studentit dhe të prindit invalid;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "1/b Studentët, familjet e të cilëve trajtohen /përfitojnë ndihmë\n      ekonomike të plotë apo të pjesshme nga njësitë bazë të vetëqeverisjes\n      vendore."
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [_vm._v("a) Çertifikatë Familjare ")]),
+        _vm._v(
+          "që vërteton lidhjen e studentit\n    me kryefamiljarin, familja e të cilit përfiton ndihmë ekonomike të plotë\n    apo të pjesshme nga njësitë e vetëqeversijes vendore;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [_vm._v("b) ")]),
+        _vm._v(
+          "Vërtetim nga njësia e vetëqeverisjes vendore në lidhje\n    me masën e ndihmës ekonomike që përfiton familja. Vërtetimi i ndihmës\n    ekonomike duhet të ketë të shënuar "
+        ),
+        _c("strong", [_vm._v("numrin e dosjes ")]),
+        _vm._v("dhe të\n    jetë shënuar qartë\n    "),
+        _c("strong", [
+          _vm._v("shuma e ndihmës ekonomike (me shifra dhe me fjalë")
+        ]),
+        _vm._v("), si\n    dhe "),
+        _c("strong", [
+          _vm._v("masa e ndihmës ekonomike (e plotë ose e pjesshme)")
+        ]),
+        _vm._v(
+          ".\n    Vërtetimi duhet të jetë me numër protokolli, të jetë nënshkruar nga\n    përgjegjegjësi i seksionit të ndihmës ekonomike dhe kryetari i njësisë së\n    vetëqeverisjes vendore dhe të jetë i vulosur. Nuk pranohen vërtetime me\n    korrigjime të pafirmosura nga personat përgjegjës dhe të pavulosura.\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [_vm._v("c) ")]),
+        _vm._v("Fotokopje të kartës së identitetit të studentit;")
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "1/b) studentëve deri në moshën 25 vjeç, që kanë vetëm njërin nga\n      prindërit, pasi prindi tjetër është ndarë nga jeta, me të ardhura\n      vjetore të familjes të pamjaftueshme për përballimin e kostos së\n      studimeve;\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "a) Çertifikatë Familjare dhe fotokopje e kartës së identitetit;"
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v("b) Çertifikatë vdekjeje e prindit që u është ndarë nga jeta ;")
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v("\n    c)\n    "),
+        _c("strong", [
+          _vm._v(
+            "Vërtetime që vërtetojnë të ardhurat vjetore të familjes, si më poshtë:\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [_vm._v("1- ")]),
+        _vm._v("Vërtetim nga njësia e vetëqeverisjes vendore\n    "),
+        _c("strong", [
+          _vm._v(
+            "që familja përfiton ndihmë ekonomike si familje në nevojë;\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    2- Vërtetimi nga Drejtoria Rajonale e Tatimeve që asnjë nga familjarët e\n    studentit (personat mbi 18 vjec) nuk ushtrojnë aktivitet privat;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    3- Vërtetime nëse prindërit apo ndonjë pjesëtar i familjes mbi 18 vjec\n    janë të regjistruar si punëkërkues të papunë (nga zyra e punës);\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    4- Vërtetim familjarisht nga Instituti i Sigurimeve Shoqërore (nëse\n    përfitojnë pension ose jo).\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    5- Vërtetim nëse familjarët kanë tokë ose pasuri të paluajtshme\n    fitimprurëse në pronësi;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "1/ c) Studentët, që kanë përfituar statusin e jetimit, deri në moshën\n      25 vjeç"
+          )
+        ]),
+        _vm._v(";\n  ")
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("a) Çertifikatë Familjare;")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("b) Fotokopje e kartës së identitetit;")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("c) Çertifikatën e vdekjes së dy prindërve;")]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    d) Fotokopje e noterizuar e statusit të jetimit të përfituar nga Ministria\n    e Mirëqënies Sociale dhe Rinisë;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "1/ ç) Studentët deri në moshën 25 vjeç, që kanë humbur kujdestarinë\n      prindërore me vendim gjykate të formës së prerë;\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v("\n    \n    "),
+        _c("strong", [
+          _vm._v(
+            "Rasti kur studenti e ka humbur përgjegjësinë prindërore nga të dy\n      prindërit;\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "1. Çertifikatë Familjare dhe fotokopje e kartës së identitetit;"
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    2. Vendim gjykate i formës së prerë që studenti ka humbur përgjegjësinë\n    prindërore (nga të dy prindërit) (Kopje origjinale ose kopje e noterizuar\n    e vendimit të gjykatës)\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v("\n    \n    "),
+        _c("strong", [
+          _vm._v(
+            "Rasti kur studenti e ka humbur përgjegjësinë prindërore nga njëri prind\n      dhe prindi tjetër nuk jeton;\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "1. Çertifikatë Familjare dhe fotokopje e kartës së identitetit;"
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    2. Vendim gjykate i formës së prerë që studenti ka humbur përgjegjësinë\n    prindërore (nga njëri prind) (Kopje origjijnale ose kopje e noterizuar e\n    vendimit të gjykatës)\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("3. Çertifikatë vdekjeje e prindit tjetër;")]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "1/d ) Studentët deri në moshën 25 vjeç, që janë identifikuar si viktima\n      të trafikut të qenieve njerëzore dhe kanë përfituar statusin ligjor për\n      trajtim si viktima të trafikut të qenieve njerëzore;\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "a) Çertifikatë Familjare dhe fotokopje e kartës së identitetit;"
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    b) Vërtetim nga Ministria e Mirëqënies Sociale ose Ministria e Brendshme\n    që kanë përfituar statusin ligjor për trajtim si viktima të trafikut të\n    qenieve njerëzore;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "1/ dh) Studentët fëmijë të punonjësve të Policisë së Shtetit, të Gardës\n      së Republikës, të Shërbimit të Kontrollit të Brendshëm, të Policisë së\n      Mbrojtjes nga Zjarri dhe të Shpëtimit, të Forcave të Armatosura, të\n      Shërbimit Informativ Shtetëror dhe të Policisë së Burgjeve, që kanë\n      humbur jetën në krye dhe për shkak të detyrës, të konfirmuar nga\n      ministria përgjegjëse për punët e brendshme dhe ajo e mbrojtjes;\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "a) Çertifikatë Familjare dhe fotokopje e kartës së identitetit;"
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    b) Çertifikatë vdekje e prindit që ka humbur jetën në krye dhe për shkak\n    të detyrës;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("c) Vërtetim konfirmimi nga Ministria përkatëse;")]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "1/e) Studentët romë dhe ballkano-egjiptianët, të konfirmuar si të tillë\n      nga ministria përgjegjëse për mirëqenien sociale;\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [_vm._v("a) Fotokopje e kartës së identitetit;")]),
+      _vm._v(" "),
+      _c("p", [_vm._v("b) Vërtetim anëtarësie në shoqatën përkatëse;")]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    c) Vërtetim konfirmimi nga Ministria përgjegjëse për mbrojtjen sociale;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "1/ë) Studentët fëmijë të ish-të dënuarve dhe të përndjekurve politikë\n      nga sistemi komunist ose fëmijë me prindër të dënuar politikë me heqje\n      lirie;\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    a) Çertifikatë Familjare që vërteton lidhjen e studentit me prindin të\n    ish-të dënuarve dhe të përndjekurve politikë nga sistemi komunist ose\n    fëmijë me prindër të dënuar politikë me heqje lirie;\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "b) Vëretimi i statusit të prindit ish të përndjekur/ dënuar politik;"
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    c) Dëshmi penaliteti për prindin ish të përndjekur politik ose vërtetim\n    për kohën e dënimit të lëshuar nga ministria e punëve të brendshme.\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [
+          _vm._v(
+            "Përveç kategorive sociale më sipër përfitojnë ulje të tarifës vjetore\n      të shkollimit sipas V.K.M Nr. 780, dt. 26.12.2018 edhe studentët,\n      konkretisht si vijon:\n    "
+          )
+        ])
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [_vm._v("e) ")]),
+        _vm._v(
+          "Studentët që fillojnë vitin e parë të ciklit të dytë\n    të studimeve në institucionet publike të arsimit të lartë dhe që kanë\n    përfunduar ciklin e parë të studimeve në institucionet publike të arsimit\n    të lartë me notën mesatare vjetore 9 (nëntë) deri në 10 (dhjetë);\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _c("strong", [_vm._v("f) ")]),
+        _vm._v(
+          "Studentët që rezultojnë me notën mesatare vjetore 9\n    (nëntë) deri në 10 (dhjetë), të regjistruar në vitin e parë pas të parit\n    dhe që kanë shlyer të gjitha detyrimet akademike të parashikuara për vitin\n    akademik paraardhës.\n  "
+        )
+      ]),
+      _vm._v(" "),
+      _c("p", [
+        _vm._v(
+          "\n    Studentë që ndjekin studimet e ciklit të dytë Master shkencor ose\n    profesional me notë mesatare 9-10, listat e këtyre studentëve në bazë të\n    notës mesatare përkatëse do të përgatiten nga vetë insitucioni (sekretaria\n    mësimore).\n  "
+        )
+      ])
+    ])
+  }
+]
+render._withStripped = true
+module.exports = { render: render, staticRenderFns: staticRenderFns }
+if (false) {
+  module.hot.accept()
+  if (module.hot.data) {
+    require("vue-hot-reload-api")      .rerender("data-v-b87c4d0c", module.exports)
+  }
+}
+
+/***/ }),
+/* 426 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -120236,7 +121991,7 @@ if (inBrowser && window.Vue) {
 
 
 /***/ }),
-/* 422 */
+/* 427 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -121181,7 +122936,7 @@ var index_esm = {
 
 
 /***/ }),
-/* 423 */
+/* 428 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -121203,13 +122958,13 @@ var store = {
 /* harmony default export */ __webpack_exports__["a"] = (store);
 
 /***/ }),
-/* 424 */
+/* 429 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(425);
+var content = __webpack_require__(430);
 if(typeof content === 'string') content = [[module.i, content, '']];
 // Prepare cssTransformation
 var transform;
@@ -121234,10 +122989,10 @@ if(false) {
 }
 
 /***/ }),
-/* 425 */
+/* 430 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(3)(false);
+exports = module.exports = __webpack_require__(4)(false);
 // imports
 
 
@@ -121248,7 +123003,7 @@ exports.push([module.i, "/* Make clicks pass-through */\n#nprogress {\n  pointer
 
 
 /***/ }),
-/* 426 */
+/* 431 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*!
@@ -121936,11 +123691,11 @@ module.exports={render:function (){var _vm=this;var _h=_vm.$createElement;var _c
 });
 
 /***/ }),
-/* 427 */
+/* 432 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__components_pagination__ = __webpack_require__(428);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__components_pagination__ = __webpack_require__(433);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__components_pagination___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__components_pagination__);
 
 
@@ -121956,19 +123711,19 @@ var Pagination = {
 /* harmony default export */ __webpack_exports__["a"] = (Pagination);
 
 /***/ }),
-/* 428 */
+/* 433 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 function injectStyle (ssrContext) {
   if (disposed) return
-  __webpack_require__(429)
+  __webpack_require__(434)
 }
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(2)
 /* script */
-var __vue_script__ = __webpack_require__(431)
+var __vue_script__ = __webpack_require__(436)
 /* template */
-var __vue_template__ = __webpack_require__(432)
+var __vue_template__ = __webpack_require__(437)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -122007,13 +123762,13 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 429 */
+/* 434 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(430);
+var content = __webpack_require__(435);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
@@ -122033,10 +123788,10 @@ if(false) {
 }
 
 /***/ }),
-/* 430 */
+/* 435 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(3)(false);
+exports = module.exports = __webpack_require__(4)(false);
 // imports
 
 
@@ -122047,7 +123802,7 @@ exports.push([module.i, "\n.pagination[data-v-2ff2a3b7] {\r\n    display: inline
 
 
 /***/ }),
-/* 431 */
+/* 436 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -122127,7 +123882,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 432 */
+/* 437 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -122192,19 +123947,19 @@ if (false) {
 }
 
 /***/ }),
-/* 433 */
+/* 438 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 function injectStyle (ssrContext) {
   if (disposed) return
-  __webpack_require__(434)
+  __webpack_require__(439)
 }
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(2)
 /* script */
-var __vue_script__ = __webpack_require__(436)
+var __vue_script__ = __webpack_require__(441)
 /* template */
-var __vue_template__ = __webpack_require__(444)
+var __vue_template__ = __webpack_require__(449)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -122243,13 +123998,13 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 434 */
+/* 439 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(435);
+var content = __webpack_require__(440);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
@@ -122269,10 +124024,10 @@ if(false) {
 }
 
 /***/ }),
-/* 435 */
+/* 440 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(3)(false);
+exports = module.exports = __webpack_require__(4)(false);
 // imports
 
 
@@ -122283,16 +124038,16 @@ exports.push([module.i, "\n.fade-enter-active {\r\n  -webkit-transition: opacity
 
 
 /***/ }),
-/* 436 */
+/* 441 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__components_navbar__ = __webpack_require__(437);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__components_navbar__ = __webpack_require__(442);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__components_navbar___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__components_navbar__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_nprogress__ = __webpack_require__(442);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_nprogress__ = __webpack_require__(447);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1_nprogress___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1_nprogress__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__utils_helper__ = __webpack_require__(443);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__utils_helper__ = __webpack_require__(448);
 //
 //
 //
@@ -122371,19 +124126,19 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 437 */
+/* 442 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var disposed = false
 function injectStyle (ssrContext) {
   if (disposed) return
-  __webpack_require__(438)
+  __webpack_require__(443)
 }
-var normalizeComponent = __webpack_require__(4)
+var normalizeComponent = __webpack_require__(2)
 /* script */
-var __vue_script__ = __webpack_require__(440)
+var __vue_script__ = __webpack_require__(445)
 /* template */
-var __vue_template__ = __webpack_require__(441)
+var __vue_template__ = __webpack_require__(446)
 /* template functional */
 var __vue_template_functional__ = false
 /* styles */
@@ -122422,13 +124177,13 @@ module.exports = Component.exports
 
 
 /***/ }),
-/* 438 */
+/* 443 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // style-loader: Adds some css to the DOM by adding a <style> tag
 
 // load the styles
-var content = __webpack_require__(439);
+var content = __webpack_require__(444);
 if(typeof content === 'string') content = [[module.i, content, '']];
 if(content.locals) module.exports = content.locals;
 // add the styles to the DOM
@@ -122448,10 +124203,10 @@ if(false) {
 }
 
 /***/ }),
-/* 439 */
+/* 444 */
 /***/ (function(module, exports, __webpack_require__) {
 
-exports = module.exports = __webpack_require__(3)(false);
+exports = module.exports = __webpack_require__(4)(false);
 // imports
 
 
@@ -122462,7 +124217,7 @@ exports.push([module.i, "\n.navbar[data-v-df0930a6] {\r\n  background-color: rgb
 
 
 /***/ }),
-/* 440 */
+/* 445 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -122625,7 +124380,7 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 });
 
 /***/ }),
-/* 441 */
+/* 446 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -122867,7 +124622,7 @@ if (false) {
 }
 
 /***/ }),
-/* 442 */
+/* 447 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_RESULT__;/* NProgress, (c) 2013, 2014 Rico Sta. Cruz - http://ricostacruz.com/nprogress
@@ -123353,7 +125108,7 @@ var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_RESULT__;/* NProgress, 
 
 
 /***/ }),
-/* 443 */
+/* 448 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -123367,7 +125122,7 @@ var Helper = {
 /* harmony default export */ __webpack_exports__["a"] = (Helper);
 
 /***/ }),
-/* 444 */
+/* 449 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var render = function() {
@@ -123423,1219 +125178,10 @@ if (false) {
 }
 
 /***/ }),
-/* 445 */
+/* 450 */
 /***/ (function(module, exports) {
 
 // removed by extract-text-webpack-plugin
-
-/***/ }),
-/* 446 */,
-/* 447 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var disposed = false
-var normalizeComponent = __webpack_require__(4)
-/* script */
-var __vue_script__ = null
-/* template */
-var __vue_template__ = __webpack_require__(448)
-/* template functional */
-var __vue_template_functional__ = false
-/* styles */
-var __vue_styles__ = null
-/* scopeId */
-var __vue_scopeId__ = null
-/* moduleIdentifier (server only) */
-var __vue_module_identifier__ = null
-var Component = normalizeComponent(
-  __vue_script__,
-  __vue_template__,
-  __vue_template_functional__,
-  __vue_styles__,
-  __vue_scopeId__,
-  __vue_module_identifier__
-)
-Component.options.__file = "resources/js/app/pages/njoftimeburse.vue"
-
-/* hot reload */
-if (false) {(function () {
-  var hotAPI = require("vue-hot-reload-api")
-  hotAPI.install(require("vue"), false)
-  if (!hotAPI.compatible) return
-  module.hot.accept()
-  if (!module.hot.data) {
-    hotAPI.createRecord("data-v-266d15ac", Component.options)
-  } else {
-    hotAPI.reload("data-v-266d15ac", Component.options)
-  }
-  module.hot.dispose(function (data) {
-    disposed = true
-  })
-})()}
-
-module.exports = Component.exports
-
-
-/***/ }),
-/* 448 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var render = function() {
-  var _vm = this
-  var _h = _vm.$createElement
-  var _c = _vm._self._c || _h
-  return _vm._m(0)
-}
-var staticRenderFns = [
-  function() {
-    var _vm = this
-    var _h = _vm.$createElement
-    var _c = _vm._self._c || _h
-    return _c("div", { staticClass: "container" }, [
-      _c("p"),
-      _vm._v(" "),
-      _c("p", [_c("strong", [_vm._v("NJOFTIM")])]),
-      _vm._v(" "),
-      _c("p", [
-        _c(
-          "a",
-          {
-            attrs: {
-              href:
-                "http://fshs-ut.edu.al/per-dokumentacionin-qe-duhet-te-dorezojne-kategorite-e-studenteve-te-ciklit-te-pare-te-studimeve-bachelor-qe-plotesojne-kriteret-per-te-perfituar-burse/"
-            }
-          },
-          [
-            _c("strong", [
-              _vm._v(
-                "PËR DOKUMENTACIONIN QË DUHET TË DORËZOJNË KATEGORITË E STUDENTËVE TË\n        CIKLIT TË PARË TË STUDIMEVE (BACHELOR) QË PLOTËSOJNË KRITERET PËR TË\n        PËRFITUAR BURSË"
-              )
-            ])
-          ]
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [_c("strong")]),
-      _vm._v(" "),
-      _c("p", [_c("strong")]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    Bazuar në Vendimin Nr. 39, datë 23.01.2019 të Këshillit të Ministrave “Për\n    disa ndryshime në VKM 903, dt. 21.12.2016 “Për përcaktimin e kritereve për\n    përfitimin e bursave nga fondi i mbështetjes studentore për studentët e\n    shkëlqyer, studentët që studiojnë në programe studimi në fushat prioritare\n    dhe studentët në nevojë”, të ndryshuar ,  njoftohen të gjithë studentët e\n    FTI-së të "
-        ),
-        _c("strong", [_vm._v("PROGRAMIT TË CIKLIT TË PARË BACHELOR")]),
-        _vm._v(
-          ", se ka\n    filluar procedura për dorëzimin e dokumentave për përfitim burse për \n    vitin akademik 2020- 2021.\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [_c("strong")]),
-      _vm._v(" "),
-      _c("ol", [
-        _c("li", [
-          _vm._v(
-            "\n      Dorëzimi i dokumentacionit do të bëhet nëpërmjet shërbimit postar në\n      adresën:\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("Fakulteti i Teknologjisë së Informacionit")]),
-      _vm._v(" "),
-      _c("p", [_vm._v("Sheshi “Nënë Tereza”,")]),
-      _vm._v(" "),
-      _c("p", [_vm._v("Nr.1, Tiranë")]),
-      _vm._v(" "),
-      _c("ol", [
-        _c("li", [
-          _vm._v(
-            "\n      Dokumentacioni mund të dorëzohet edhe pranë zyrës së finances, e hënë -\n      e premte, ora 09:00-12:00.\n    "
-          )
-        ]),
-        _vm._v(" "),
-        _c("li", [
-          _vm._v(
-            "\n      Bashkëlidhur gjeni formularin dhe dokumentacionin që do paraqesin\n      studentët sipas kategorive.\n    "
-          )
-        ]),
-        _vm._v(" "),
-        _c("li", [
-          _vm._v(
-            "\n      Studentët duhet të dorëzojnë me dokumentacionin dhe nr. personal të\n      llogarisë bankare.\n    "
-          )
-        ]),
-        _vm._v(" "),
-        _c("li", [
-          _vm._v(
-            "\n      Dokumentacioni të jetë origjinal ose i noterizuar (përveç\n      dokumentacionit të marrë nga e-albania).\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("ul", [
-        _c("li", [
-          _c("strong", [_vm._v("Studentët me mesatare 9 (nëntë) -10 (dhjetë)")])
-        ]),
-        _vm._v(" "),
-        _c("li", [
-          _vm._v(
-            "\n       Studentët e pranuar në vitin e parë akakdemik “Bachelor” 2020-2021 me\n      notë mesatare 9 (nëntë) -10 (dhjetë), listat e këtyre studentëve në bazë\n      të notës mesatare përkatëse do të përcillen nga Qendra e Shërbimeve\n      Arsimore.\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    Këta studentë duhet të dërgojnë me shërbimin postar vetëm fotokopje të\n    kartës së identitëtit dhe nr personal bankar.\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("ul", [
-        _c("li", [
-          _vm._v(
-            "\n      Studentët që ndjekin studimet, në vitet pas të parit, të cilët kanë\n      shlyer të gjitha detyrimet e vitit paraardhës akademik, me notë mesatare\n      vjetore e ponderuar nga 9 (nëntë) deri në 10 (dhjetë) përgatiten nga\n      insitucioni (sekretaria mësimore).\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    Këta studentë duhet të dërgojnë me shërbimin postar vetëm fotokopje të\n    kartës së identitetit dhe nr personal banker.\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "Bursa financiare paguhet nga data e regjistrimit në rastet e aplikimit\n      në fillim të vitit akademik. Për fazat e tjera, bursa financiare paguhet\n      nga muaji pasardhës, kur studenti ka paraqitur kërkesën dhe përfitojnë\n      vetëm ata studente që plotësojnë kriteret e përcaktuara në këtë vendim\n      gjatë vitit akademik 2020 - 2021."
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [_c("strong", [_vm._v("Tiranë, më ____ / ____ / 202__")])]),
-      _vm._v(" "),
-      _c("p", [_c("strong")]),
-      _vm._v(" "),
-      _c("p", [_c("strong", [_vm._v("FORMULAR APLIKIMI PËR PËRFITIM BURSE")])]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "1. Emër Mbiemër __________________________________________\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "2. Atësia _________________________________________________\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "3. Datëlindja ______________________________________________\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "4. Nr.ID__________________________________________________\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "5. Program Studimi /Profili____________________________________\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "6. Kursi/grupi ______________________________________________\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "7. Nr.telefoni_______________________________________________\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            'Unë______________________________, student në Fakultetin e Teknologjisë\n      së Informacionit paraqes kërkesën për të përfituar bursë për vitin\n      akademik 2020-2021, pasi plotësoj kushtet e përcaktuara nga Vendimet e\n      Këshillit të Ministrave nr. 39, datë 23.01.2019, "Për disa ndryshime dhe\n      shtesa në VKM nr. 903, datë 21.12.2016".\n    '
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "Deklaroj se në të dhënat e paraqitura nga ana ime si dhe dokumentacioni\n      shoqërues që provon plotësimin e njërit prej kritereve të renditura në\n      vijim të kërkesës time, të nënvizuara me shenjën X përbri kriterit.\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "I gjithë dokumentacioni i paraqitur është dokumentacion zyrtar dhe i\n      marrë nga instuticione shtetërore dhe/ose të njohura me ligj.\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "Jam në dijeni se deklarimet e rreme nga ana ime në këtë kërkesë, si dhe\n      paraqitja e dokumentave të falsifikuara, përveç përgjegjësisë penale,\n      sjellin automatikisht edhe heqjen e së drejtës për të përfituar bursë.\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "Dokumentat shoqëruese janë origjinale ose kopje të noterizuara.\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [_vm._v("________________________________________ ")])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [_vm._v("(Emër Mbiemër, Nënshkrimi i kërkuesit)")])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v("KRITERET PËR TË PËRFITUAR BURSË PËR VITIN AKADEMIK 2020-2021")
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [_c("strong")]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    Në zbatim të V.K.M-së Nr. 39 datë 23.01.2019 “Për disa ndryshime në VKM-në\n    903, datë 21.12.2016”, njoftojmë se ka filluar aplikimi për studentët e\n    ciklit të parë për përfitimin e bursave për vitin akademik 2020- 2021,\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    Dokumentat që duhet të dorëzojnë studentët sipas kategorive janë si më\n    poshtë:\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "a) Studentet, familjet e të cilëve trajtohen me ndihmë ekonomike:\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v("Për këtë kategori dokumentat që duhet të plotësohen janë:")
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("1.Çertifikate familjare,")]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v("\n    2.\n    "),
-        _c("strong", [
-          _vm._v(
-            "Vërtetim nga Njësia Administrative në lidhje me masën e ndihmës\n      ekonomike "
-          )
-        ]),
-        _vm._v(
-          "që përfiton familja. Vërtetimi i ndihmës ekonomike duhet të ketë të\n    shënuar "
-        ),
-        _c("strong", [_vm._v("numrin e dosjes ")]),
-        _vm._v("dhe të jetë shënuar qartë\n    "),
-        _c("strong", [
-          _vm._v("shuma e ndihmës ekonomike (me shifra dhe me fjalë")
-        ]),
-        _vm._v("), si\n    dhe "),
-        _c("strong", [
-          _vm._v("masa e ndihmës ekonomike (e plotë ose e pjesshme)")
-        ]),
-        _vm._v(
-          ".\n    Vërtetimi duhet të jetë me numër protokolli, të jetë nënshkruar nga\n    përgjegjësi i seksionit të ndihmës ekonomike dhe kryetari i njësisë së\n    vetëqeverisjes vendore dhe të jetë i vulosur. (Njëkohësisht në vërtetim\n    duhet të jetë e shënuar qartë adresa e Njësisë së qeverisjes vendore që e\n    ka lëshuar për efekt të verifikimit të mëtejshëm)\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("3. Fotokopje të kartës së ID të vetë studentit.")]),
-      _vm._v(" "),
-      _c("p", [_vm._v("4. Formulari i kërkesë për t’u trajtuar me bursë.")]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "b) Bashkëshortët që kanë fëmijë dhe janë të dy studentë, përfitojnë\n      secili burse Financiare:\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v("Për këtë kategori dokumentat që duhet të plotësohen janë:")
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("1. Formulari i kërkesë për t’u trajtuar me bursë.")]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    2. Vërtetim studenti nga institucionet publike IAL për secilin prej tyre.\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("3. Çertifikatë familjare.")]),
-      _vm._v(" "),
-      _c("p", [_vm._v("4. Fotokopje të kartës së ID të vetë studentit.")]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "c) Studentët, persona me aftësi të kufizuara, të vërtetuar nga\n      Komisioni Mjekësor i Caktimit të Aftësisë për Punë, përfitues të pagesës\n      së aftësisë së kufizuar:\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v("Për këtë kategori dokumentat që duhet të plotësohen janë:")
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("1. Formulari i kërkesë për t’u trajtuar me bursë.")]),
-      _vm._v(" "),
-      _c("p", [_vm._v("2. Çertifikatë familjare.")]),
-      _vm._v(" "),
-      _c("p", [_vm._v("3. Fotokopje e kartës së identitetit;")]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    4. Vërtetim origjinal (ose kopje e noterizuar) të lëshuar nga KMCAP\n    (Komisioni Mjekësor i Caktimit të Aftësisë për Punë) për studentin me\n    aftësi të kufizuar;\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    5. Vërtetimi për pagesën e aftësisë së kufizuar të lëshuar nga zyrat\n    përkatëse (nga Instituti i Sigurimeve Shoqërore apo nga zyrat e ndihmes\n    ekonomike në Bashki)\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "ç) Studentët që i kanë të dy prindërit me aftësi të kufizuara, të\n      vërtetuar me vendim të Komisionit Mjekësor të Caktimit të Aftësisë për\n      Punë, përfitues të pagesës së aftësisë së kufizuar\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v("Për këtë kategori dokumentat që duhet të plotësohen janë:")
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("1. Formulari i kërkesë për t’u trajtuar me bursë.")]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    2. Kopje origjinale ose e noterizuar e Vërtetimit të KMCAP-së (Komsionit\n    të caktimit të aftësisë për punë) për të dy prindërit me aftësi të\n    kufizuar ( invalid pune, invalid paraplegjik, invalid tetraplegjik).\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    3. Vërtetim origjinal të institutit të sigurimeve shoqërore për pagesën e\n    pensionit të invaliditetit ose nga Nj"
-        ),
-        _c("strong", [_vm._v("ë")]),
-        _vm._v(
-          "sia administrative\n    vërtetimin e pagësë së paaftësisë për punë (për të dy prindërit)\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    4. Çertifikatë Familjare që vërteton lidhjen e studentit me invalidin e\n    punës/ invalidin paraplegjik ose tetraplegjik;\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("5. Fotokopje të kartës së ID të vetë studentit.")]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v("d/1) Studentët që i kanë të dy prindërit pensionistë ")
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("1. Formulari i kërkesë për t’u trajtuar me bursë.")]),
-      _vm._v(" "),
-      _c("p", [_vm._v("2. Çertifikatë Familjare.")]),
-      _vm._v(" "),
-      _c("p", [_vm._v("3. Fotokopje të kartës së ID të vetë studentit")]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    4. Vërtetim origjinal të institutit të sigurimeve shoqërore për pagesën e\n    pensionit të pleqërisë për prindin/ të dy prindërit.\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "d/2) Studentët që e kanë të njërin prind pensionist dhe prindi tjetër\n      nuk jeton\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("1. Formulari i kërkesë për t’u trajtuar me bursë.")]),
-      _vm._v(" "),
-      _c("p", [_vm._v("2. Çertifikatë Familjare.")]),
-      _vm._v(" "),
-      _c("p", [_vm._v("3. Fotokopje të kartës së ID të vetë studentit")]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    4. Vërtetim origjinal të institutit të sigurimeve shoqërore për pagesën e\n    pensionit të pleqërisë të prindërit që jeton;\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("5. Çertifikatë vdekjeje për prindin që nuk jeton;")]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "dh) Studentët, të tretët në radhën e fëmijëve e lart, të cilët vijnë\n      nga familje me tre fëmijë e më shumë, nga të cilët dy të parët janë\n      studentë në institucionet publike të arsimit të lartë:\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v("Për këtë kategori dokumentat që duhet të plotësohen janë:")
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("1. Formulari i kërkesë për t’u trajtuar me bursë.")]),
-      _vm._v(" "),
-      _c("p", [_vm._v("2. Vërtetim studenti.")]),
-      _vm._v(" "),
-      _c("p", [_vm._v("3. Çertifikatë Familjare.")]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "4. Vërtetim për të dy fëmijët e parë që janë student në IAL Publike."
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "d) Studentët që kanë përfituar statusin e jetimit, deri në moshën 25\n      vjec(sipas Ligjit Nr. 8153, date 30.10.1996)\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "1. Çertifikatë Familjare dhe fotokopje e kartës së identitetit;"
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("2. Çertifikatën e vdekjes së dy prindërve;")]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    3. Fotokopje e noterizuar e statusit të jetimit të përfituar nga Ministria\n    e Mirëqënies Sociale dhe Rinisë;\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "e) Studentët që kanë humbur përgjegjësinë prindërore, me vendim gjykate\n      të formës së prerë;\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("1. Çertifikatë Familjare")]),
-      _vm._v(" "),
-      _c("p", [_vm._v("2. Fotokopje e kartës së identitetit;")]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    3. Vendim gjykate i formës së prerë që studenti ka humbur përgjegjësinë\n    prindërore (nga të dy prindërit);\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "f) Studentët që janë identifikuar e trajtuar si viktima të trafikut të\n      qenieve njerëzore dhe kanë humbur kujdesin prindëror\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "1. Çertifikatë Familjare dhe fotokopje e kartës së identitetit;"
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    2. Vendim gjykate i formës së prerë që kanë humbur kujdesin prindëror;\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    3. Vërtetim nga Ministria e Mirëqënies Sociale ose Ministria e Brendshme\n    që kanë përfituar statusin ligjor për trajtim si viktima të trafikut të\n    qenieve njerëzore;\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "g) Studentët që rezultojnë fëmijë të punonjësve të Policisë së Shtetit,\n      të Gardës së Republikës, të Shërbimit të Kontrollit të Brendshëm, të\n      Policisë së Mbrojtjes nga Zjarri dhe të Shpëtimit, të Forcave të\n      Armatosura, të Shërbimit Informativ Shtetëror dhe të Policisë së\n      Burgjeve që kanë humbur jetën në krye dhe për shkak të detyrës.\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "1. Çertifikatë Familjare dhe fotokopje e kartës së identitetit;"
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    2. Çertifikatë vdekje e prindit që ka humbur jetën në krye dhe për shkak\n    të detyrës;\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("3. Vërtetim nga Ministria përkatëse;")])
-    ])
-  }
-]
-render._withStripped = true
-module.exports = { render: render, staticRenderFns: staticRenderFns }
-if (false) {
-  module.hot.accept()
-  if (module.hot.data) {
-    require("vue-hot-reload-api")      .rerender("data-v-266d15ac", module.exports)
-  }
-}
-
-/***/ }),
-/* 449 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var disposed = false
-var normalizeComponent = __webpack_require__(4)
-/* script */
-var __vue_script__ = null
-/* template */
-var __vue_template__ = __webpack_require__(450)
-/* template functional */
-var __vue_template_functional__ = false
-/* styles */
-var __vue_styles__ = null
-/* scopeId */
-var __vue_scopeId__ = null
-/* moduleIdentifier (server only) */
-var __vue_module_identifier__ = null
-var Component = normalizeComponent(
-  __vue_script__,
-  __vue_template__,
-  __vue_template_functional__,
-  __vue_styles__,
-  __vue_scopeId__,
-  __vue_module_identifier__
-)
-Component.options.__file = "resources/js/app/pages/perjashtimtarifec1.vue"
-
-/* hot reload */
-if (false) {(function () {
-  var hotAPI = require("vue-hot-reload-api")
-  hotAPI.install(require("vue"), false)
-  if (!hotAPI.compatible) return
-  module.hot.accept()
-  if (!module.hot.data) {
-    hotAPI.createRecord("data-v-54bbe712", Component.options)
-  } else {
-    hotAPI.reload("data-v-54bbe712", Component.options)
-  }
-  module.hot.dispose(function (data) {
-    disposed = true
-  })
-})()}
-
-module.exports = Component.exports
-
-
-/***/ }),
-/* 450 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var render = function() {
-  var _vm = this
-  var _h = _vm.$createElement
-  var _c = _vm._self._c || _h
-  return _vm._m(0)
-}
-var staticRenderFns = [
-  function() {
-    var _vm = this
-    var _h = _vm.$createElement
-    var _c = _vm._self._c || _h
-    return _c("div", { staticClass: "container" }, [
-      _c("p", [_c("strong", [_vm._v("NJOFTIM")])]),
-      _vm._v(" "),
-      _c("p", [
-        _c(
-          "a",
-          {
-            attrs: {
-              href:
-                "http://fshs-ut.edu.al/per-dokumentacionin-qe-duhet-te-dorezojne-kategorite-e-studenteve-te-ciklit-te-pare-te-studimeve-bachelor-qe-plotesojne-kriteret-per-perjashtim-nga-tarifa-vjetore-e-shkollimit/"
-            }
-          },
-          [
-            _c("strong", [
-              _vm._v(
-                "PËR DOKUMENTACIONIN QË DUHET TË DORËZOJNË KATEGORITË E STUDENTËVE TË\n        CIKLIT TË PARË TË STUDIMEVE (BACHELOR) QË PLOTËSOJNË KRITERET PËR\n        PËRJASHTIM NGA TARIFA VJETORE E SHKOLLIMIT"
-              )
-            ])
-          ]
-        )
-      ]),
-      _vm._v(" "),
-      _c("p"),
-      _vm._v(" "),
-      _c("p"),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    Bazuar në Vendimin Nr. 40, datë 23.01.2019, VKM Nr.251, datë 27.03.2020,\n    të Këshillit të Ministrave “ Për disa ndryshime dhe shtesa në Vendimin Nr.\n    269, datë 29.03.2017 të Këshillit të Ministrave “Për përcaktimin e\n    kategorive të individëve që plotësojnë kriteret e pranimit në një program\n    të ciklit të parë të studimeve, në një program të integruar të studimeve\n    ose në një program të studimeve profesionale, në pamundësi financiare për\n    të mbuluar tarifat vjetore të shkollimit”, të ndryshuar , njoftohen të\n    gjithë studentët e FTI-së të programit të ciklit të parë Bachelor, se ka\n    filluar procedura për dorëzimin e dokumentave për përjashtimin nga tarifa\n    vjetore e shkollimit  për  vitin akademik 2020- 2021.\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("ol", [
-        _c("li", [
-          _vm._v(
-            "\n      Dorëzimi i dokumentacionit do të bëhet nëpërmjet shërbimit postar në\n      adresën:\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("Fakulteti i Teknologjisë së Informacionit")]),
-      _vm._v(" "),
-      _c("p", [_vm._v("Sheshi “Nënë Tereza”,")]),
-      _vm._v(" "),
-      _c("p", [_vm._v("Nr.1, Tiranë")]),
-      _vm._v(" "),
-      _c("ol", [
-        _c("li", [
-          _vm._v(
-            "\n      Dokumentacioni mund të dorëzohet edhe pranë zyrës së finances, e hënë -\n      e premte, ora 09:00-12:00.\n    "
-          )
-        ]),
-        _vm._v(" "),
-        _c("li", [
-          _vm._v(
-            "\n      Bashkëlidhur gjeni formularin dhe dokumentacionin që do paraqesin\n      studentët sipas kategorive.\n    "
-          )
-        ]),
-        _vm._v(" "),
-        _c("li", [
-          _vm._v(
-            "\n      Dokumentacioni të jetë origjinal ose i noterizuar (përveç\n      dokumentacionit të marrë nga e-albania).\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("ul", [
-        _c("li", [
-          _c("strong", [
-            _vm._v("Studentët me mesatare 9 (nëntë) - 10 (dhjetë)")
-          ])
-        ]),
-        _vm._v(" "),
-        _c("li", [
-          _vm._v(
-            "\n       Studentët e pranuar në vitin e parë akakdemik “Bachelor” 2019-2020 me\n      notë mesatare 9 (nëntë) -10 (dhjetë) nuk do të paraqesin asnjë\n      dokumentacion , pasi listat e këtyre studentëve në bazë të notës\n      mesatare përkatëse do të përcillet nga Qendra e Shërbimeve Arsimore.\n    "
-          )
-        ]),
-        _vm._v(" "),
-        _c("li", [
-          _vm._v(
-            "\n      Studentët që ndjekin studimet, në vitet pas të parit, të cilët kanë\n      shlyer të gjitha detyrimet e vitit paraardhës akademik, me notë mesatare\n      vjetore e ponderuar nga 9 (nëntë) deri në 10 (dhjetë) përgatiten nga\n      institucioni (Sekretaria mësimore).\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [_c("strong", [_vm._v("Tiranë, më ____.____. ")])]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v("FORMULAR APLIKIMI PËR PËRJASHTIM NGA TARIFA E SHKOLLIMIT")
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "1. Emër Mbiemër __________________________________________\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "2. Atësia _________________________________________________\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "3. Datëlindja ______________________________________________\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "4. Nr. ID__________________________________________________\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "5. Program Studimi /Profili____________________________________\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "6. Kursi/grupi ______________________________________________\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "7. Nr. telefoni_______________________________________________\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            'Unë _____________________________, student në Fakultetin e Teknologjise\n      së Informacionit paraqes kërkesën për përjashtimin nga tarifa e\n      shkollimit për vitin akademik 2020-2021, pasi plotësoj kushtet e\n      përcaktuara nga Vendimet e Këshillit të Ministrave nr. 40, datë\n      23.01.2019, "Për disa ndryshime dhe shtesa në VKM nr. 269, datë\n      29.03.2017",VKM 251 datë 27.03.2020, që rregullojnë tarifat vjetore të\n      shkollimit në IAL Publike.\n    '
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "Deklaroj, se në të dhënat e paraqitura nga ana ime, si dhe\n      dokumentacioni shoqërues që provon plotësimin e njërit prej kritereve të\n      renditura në vijim të kërkesës time, të nënvizuara me shenjën X përbri\n      kriterit.\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "I gjithë dokumentacioni i paraqitur është dokument zyrtar dhe janë\n      marrë nga instuticione shtetërore dhe/ose të njohura me ligj.\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "Jam në dijeni se deklarimet e rreme nga ana ime në këtë kërkesë si dhe\n      paraqitja e dokumentave të falsifikuara, përveç përgjegjësisë penale,\n      sjellin automatikisht edhe heqjen e së drejtës për përfitim nga\n      përjashtimi i tarifës së shkollimit.\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "Dokumentat shoqëruese janë origjinale ose kopje të noterizuara.\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [_vm._v("________________________________________ ")])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [_vm._v("(Emër Mbiemër, Nënshkrimi i kërkuesit)")])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("a", { attrs: { id: "_Hlk56513285" } }),
-        _c("strong", [
-          _vm._v(
-            "KRITERET PËR PËRFITIMIN E PËRJASHTIMIT NGA TARIFA VJETORE E SHKOLLIMIT,\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [_c("strong", [_vm._v("VITI AKADEMIK 2020-2021. ")])]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    Në zbatim të V.K.M-së Nr. 40, datë 23.01.2019, “Për disa ndryshime dhe\n    shtesa në VKM 269, dt.29.03.2017”, VKM Nr.251, datë 27.03.2020, njoftojmë\n    se ka filluar aplikimi për studentët e ciklit të parë të kategorive që\n    përfitojnë përjashtim nga tarifa e shkollimit të vitit akademik 2020-\n    2021,\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "Dokumentat që duhet të dorëzojnë studentët sipas kategorive janë si më\n      poshtë:\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "i. Studentët, familjet e të cilëve trajtohen me ndihmë ekonomike:\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v("Për këtë kategori dokumentat që duhet të plotësohen janë:")
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("1. Çertifikatë familjare.")]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    2. Vërtetim nga Njesia Administrative në lidhje me masën e ndihmës\n    ekonomike që përfiton familja. Vërtetimi i ndihmës ekonomike duhet të ketë\n    të shënuar numrin e dosjes dhe të jetë shënuar qartë shuma e ndihmës\n    ekonomike (me shifra dhe me fjalë), si dhe masa e ndihmës ekonomike (e\n    plotë ose e pjesshme). Vërtetimi duhet të jetë me numër protokolli, të\n    jetë nënëshkruar nga përgjegjegjësi i seksionit të ndihmës ekonomike dhe\n    kryetari i njësisë së vetëqeverisjes vendore dhe të jetë i vulosur.\n    (Njëkohësisht në vërtetim duhet të jetë e shënuar qartë adresa e Njësisë\n    së qeverisjes vendore që e ka lëshuar për efekt të verifikimit të\n    mëtejshëm)\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("3. Fotokopje të kartës së ID të vetë studentit.")]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "ii. Bashkëshortët që kanë fëmijë dhe janë të dy studentë, përfitojnë\n      secili burse Financiare:\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v("Për këtë kategori dokumentat që duhet të plotësohen janë:")
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    1. Vërtetim studenti nga institucionet publike IAL për secilin prej tyre.\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("2. Çertifikatë familjare.")]),
-      _vm._v(" "),
-      _c("p", [_vm._v("3. Fotokopje të kartës së ID të vetë studentit.")]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "iii. Studentët, persona me aftësi të kufizuara, të vërtetuar nga\n      Komisioni Mjekësor i Caktimit të Aftësisë për Punë, përfitues të pagesës\n      së aftësisë së kufizuar:\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v("Për këtë kategori dokumentat që duhet të plotësohen janë:")
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("1. Çertifikatë familjare.")]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "2. Çertifikatë Familjare dhe fotokopje e kartës së identitetit;"
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    3. Vërtetim original (ose kopje e noterizuar) të lëshuar nga KMCAP(\n    Komisioni Mjekësor i Caktimit të Aftësisë për Punë) për studentin me\n    aftësi të kufizuar;\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    4. Vërtetimi për pagesën e aftësisë së kufizuar të lëshuar nga zyrat\n    përkatëse (nga Instituti i Sigurimeve Shoqërore apo nga zyrat e ndihmës\n    ekonomike në Bashki)\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "iv. Studentët të cilët kanë, të paktën, njërin prind persona me aftësi\n      të kufizuar, të vërtetuar me vendim të Komisionit Mjekësor të Caktimit\n      të Aftësisë për Punë, përfitues të pagesës së aftësisë së kufizuar\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v("Për këtë kategori dokumentat që duhet të plotësohen janë:")
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    1. Kopje origjinale ose e noterizuar e Vërtetimit të KMCAP-së ( Komsionit\n    të caktimit të aftësisë për punë) për të dy prindërit me aftësi të\n    kufizuar ( invalid pune, invalid paraplegjik, invalid tetraplegjik).\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    2. Vërtetim origjinal të institutit të sigurimeve shoqërore për pagesën e\n    pensionit të invaliditetit ose nga Njesia administrative vërtetimin e\n    pagësë së paaftësisë për punë( për të dy prindërit)\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    3. Çertifikatë Familjare që vërteton lidhjen e studentit me invalidin e\n    punës/ invalidin paraplegjik ose tetraplegjik;\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("4. Fotokopje të kartës së ID të vetë studentit.")]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v("v. /1 Studentët që i kanë të dy prindërit pensionistë ")
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("1. Çertifikatë Familjare.")]),
-      _vm._v(" "),
-      _c("p", [_vm._v("2. Fotokopje të kartës së ID të vetë studentit")]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    3. Vërtetim origjinal të institutit të sigurimeve shoqërore për pagesën e\n    pensionit të pleqërisë për prindin/ të dy prindërit.\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "v./2 Studentët që e kanë të njërin prind pensionist dhe prindi tjetër\n      nuk jeton\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [_vm._v("1. ")]),
-        _vm._v("Çertifikatë Familjare.")
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("2. Fotokopje të kartës së ID të vetë studentit")]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    3. Vërtetim origjinal të institutit të sigurimeve shoqërore për pagesën e\n    pensionit të pleqërisë të prindërit që jeton;\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("4. Çertifikatë vdekjeje për prindin që nuk jeton;")]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "vi. Studentët, të tretët në radhën e fëmijëve e lart, të cilët vijnë\n      nga familje me tre fëmijë e më shumë, nga të cilët dy të parët janë\n      studentë në institucionet publike të arsimit të lartë:\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "Për këtë kategori dokumentat që duhet të plotësohen janë:\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("1. Vërtetim studenti.")]),
-      _vm._v(" "),
-      _c("p", [_vm._v("2. Çertifikatë Familjare.")]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "3. Vërtetim për të dy fëmijët e parë që janë student në IAL Publike."
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "vii. Studentët që kanë përfituar statusin e jetimit, deri në moshën 25\n      vjeç (sipas Ligjit Nr. 8153, datë 30.10.1996)\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "1. Çertifikatë Familjare dhe fotokopje e kartës së identitetit;"
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("2. Çertifikatën e vdekjes së dy prindërve;")]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    3. Fotokopje e noterizuar e statusit të jetimit të përfituar nga Ministria\n    e mirëqënies sociale dhe rinisë;\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "viii. Studentët që kanë humbur përgjegjësinë prindërore, me vendim\n      gjykate të formës së prerë;\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("1. Çertifikatë Familjare")]),
-      _vm._v(" "),
-      _c("p", [_vm._v("2. Fotokopje e kartës së identitetit;")]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    3. Vendim gjykate i formës së prerë që studenti ka humbur përgjegjësinë\n    prindërore (nga të dy prindërit);\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "ix. Studentët që janë identifikuar e trajtuar si viktima të trafikut të\n      qenieve njerëzore dhe kanë humbur kujdesin prindëror\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "1. Çertifikatë Familjare dhe fotokopje e kartës së identitetit;"
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    2. Vendim gjykate i formës së prerë që kanë humbur kujdesin prindëror;\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    3. Vërtetim nga Ministria e Mirëqënies Sociale ose Ministria e Brendshme\n    që kanë përfituar statusin ligjor për trajtim si viktima të trafikut të\n    qenieve njerëzore;\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "x. Studentët që rezultojnë fëmijë të punonjësve të Policisë së Shtetit,\n      të Gardës së Republikës, të Shërbimit tëKontrollit të Brendshëm, të\n      Policisë së Mbrojtjes nga Zjarri dhe të Shpëtimit, të Forcave të\n      Armatosura, të ShërbimitInformativ Shtetëror dhe të Policisë së Burgjeve\n      që kanë humbur jetën në krye dhe për shkak të detyrës.\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "1. Çertifikatë Familjare dhe fotokopje e kartës së identitetit;"
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    2. Çertifikatë vdekje e prindit që ka humbur jetën në krye dhe për shkak\n    të detyrës;\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("3. Vërtetim nga Ministria përkatëse;")]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "xi. Studentët romë dhe ballkano-egjiptianët, të konfirmuar si të tillë\n      nga ministria përgjegjëse për mirëqenien sociale;\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [_vm._v("1. Fotokopje e kartës së identitetit;")]),
-      _vm._v(" "),
-      _c("p", [_vm._v("2. Vërtetim anëtarësie në shoqatën përkatëse;")]),
-      _vm._v(" "),
-      _c("p", [_vm._v("3. Vetëdeklarim ;")]),
-      _vm._v(" "),
-      _c("p", [
-        _c("strong", [
-          _vm._v(
-            "xii. Studentët fëmijë të ish-të dënuarve dhe të përndjekurve politikë\n      nga sistemi komunist ose fëmijë me prindër të dënuar politikë me heqje\n      lirie;\n    "
-          )
-        ])
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    1. Çertifikatë Familjare që vërteton lidhjen e studentit me prindin të\n    ish-të dënuarve dhe të përndjekurve politikë nga sistemi komunist ose\n    fëmijë me prindër të dënuar politikë me heqje lirie;\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "2. Vëretimi i statusit të prindit ish të përndjekur/ dënuar politik;"
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [
-        _vm._v(
-          "\n    3. Dëshmi penaliteti për prindin ish të përndjekur politik ose vërtetim\n    për kohën e dënimit të lëshuar nga ministria e punëve të brendshme.\n  "
-        )
-      ]),
-      _vm._v(" "),
-      _c("p", [_c("strong")])
-    ])
-  }
-]
-render._withStripped = true
-module.exports = { render: render, staticRenderFns: staticRenderFns }
-if (false) {
-  module.hot.accept()
-  if (module.hot.data) {
-    require("vue-hot-reload-api")      .rerender("data-v-54bbe712", module.exports)
-  }
-}
 
 /***/ })
 /******/ ]);

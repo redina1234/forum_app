@@ -1,12 +1,12 @@
 <template>
   <div class="container page-container" style="position: relative">
     <div class="card">
-      <div class="card-header">Register</div>
+      <div class="card-header">Regjistrohu</div>
       <div class="row">
         <div class="col-md-6 offset-md-3">
           <form v-on:submit.prevent="onSubmit" style="margin: 25px">
             <div class="form-group">
-              <label>Name</label>
+              <label>Emri</label>
               <input
                 type="text"
                 v-model="name"
@@ -63,7 +63,7 @@
               type="submit"
               class="btn btn-secondary"
             >
-              Register
+              Regjistrohu
             </button>
           </form>
         </div>

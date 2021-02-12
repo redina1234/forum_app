@@ -29,7 +29,7 @@
                 style="display: block"
                 class="btn btn-lg btn-success float-right"
               >
-                Create Thread
+                Krijo nje postim te ri
               </a>
             </div>
 
@@ -52,10 +52,11 @@
                       "
                     >
                       <h4>{{ thread.title | shortTitle }}</h4>
-                      <span>Post by: {{ thread.user.name }}</span>
+                      <span>Postuar nga: {{ thread.user.name }}</span>
                       <br />
                       <span>
-                        Latest reply: {{ thread.latestPost.user.name }} &middot;
+                        Pergjigjet me te fundit:
+                        {{ thread.latestPost.user.name }} &middot;
                         {{ thread.latestPost.created_at | friendlyDate }}
                       </span>
                     </div>
@@ -76,7 +77,7 @@
                       }}</span>
                       <br />
                       <span style="font-size: 14px; color: #606f7b"
-                        >REPLIES</span
+                        >Pergjigje</span
                       >
                     </div>
                   </div>

@@ -26,7 +26,7 @@
           </nav>
 
           <h1 class="display-4">{{ app.store.state.currentForum.title }}</h1>
-          <h5>Create Thread</h5>
+          <h5>Krijo postim</h5>
         </div>
       </div>
 
@@ -61,7 +61,7 @@
             class="btn btn-lg btn-success float-right"
             style="margin-bottom: 50px"
           >
-            Create Thread
+            Krijo postim te ri
           </button>
         </form>
       </div>
