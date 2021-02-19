@@ -78432,7 +78432,7 @@ var render = function() {
                                               " /\n                    "
                                           ),
                                           _c("strong", [
-                                            _vm._v(_vm._s(forum.replies - 1))
+                                            _vm._v(_vm._s(forum.replies))
                                           ])
                                         ]
                                       )
@@ -91531,7 +91531,7 @@ var render = function() {
                                   },
                                   [
                                     _vm._v(
-                                      "\n              Cancel\n            "
+                                      "\n              Anullo\n            "
                                     )
                                   ]
                                 )
@@ -91593,7 +91593,7 @@ var render = function() {
                                   },
                                   [
                                     _vm._v(
-                                      "\n                Reply\n              "
+                                      "\n                Pergjigju\n              "
                                     )
                                   ]
                                 )
@@ -92274,6 +92274,11 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 //
 //
 //
+//
+//
+//
+//
+//
 
 /* harmony default export */ __webpack_exports__["default"] = ({
   name: "search",
@@ -92489,7 +92494,8 @@ var render = function() {
                                     _vm._v(" "),
                                     _c("span", [
                                       _vm._v(
-                                        "Post by: " + _vm._s(thread.user.name)
+                                        "Postuar nga: " +
+                                          _vm._s(thread.user.name)
                                       )
                                     ]),
                                     _vm._v(" "),
@@ -92497,7 +92503,7 @@ var render = function() {
                                     _vm._v(" "),
                                     _c("span", [
                                       _vm._v(
-                                        "Latest reply: " +
+                                        "Pergjigjet me te fundit:\n                  " +
                                           _vm._s(thread.latestPost.user.name)
                                       )
                                     ])
@@ -92548,7 +92554,7 @@ var render = function() {
                                             color: "#606f7b"
                                           }
                                         },
-                                        [_vm._v("REPLIES")]
+                                        [_vm._v("Pergjigjet")]
                                       )
                                     ]
                                   )
@@ -92567,7 +92573,7 @@ var render = function() {
                       staticStyle: { "margin-bottom": "0" },
                       attrs: { role: "alert" }
                     },
-                    [_vm._v("\n        No results.\n      ")]
+                    [_vm._v("\n        S'ka rezultate.\n      ")]
                   )
             ])
           ])
@@ -124304,13 +124310,6 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 //
 //
 //
-//
-//
-//
-//
-//
-//
-//
 
 /* harmony default export */ __webpack_exports__["default"] = ({
   name: "navbar",
@@ -124388,206 +124387,166 @@ var render = function() {
   var _h = _vm.$createElement
   var _c = _vm._self._c || _h
   return _c("div", { staticClass: "container" }, [
-    _c("nav", { staticClass: "navbar navbar-expand-lg navbar-dark bg-dark" }, [
-      _vm._m(0),
-      _vm._v(" "),
-      _c(
-        "form",
-        {
-          on: {
-            submit: function($event) {
-              $event.preventDefault()
-              return _vm.onSubmit($event)
-            }
-          }
-        },
-        [
-          _c("input", {
-            directives: [
-              {
-                name: "model",
-                rawName: "v-model",
-                value: _vm.searchQuery,
-                expression: "searchQuery"
-              }
-            ],
-            staticClass: "search-input",
-            attrs: { placeholder: "kerkoni..." },
-            domProps: { value: _vm.searchQuery },
-            on: {
-              input: function($event) {
-                if ($event.target.composing) {
-                  return
-                }
-                _vm.searchQuery = $event.target.value
-              }
-            }
-          }),
-          _vm._v(" "),
-          _c(
-            "button",
-            { staticClass: "my-2 my-sm-0", attrs: { type: "submit" } },
-            [_vm._v("Search")]
-          )
-        ]
-      ),
-      _vm._v(" "),
-      _c(
-        "div",
-        {
-          staticClass: "collapse navbar-collapse",
-          attrs: { id: "navbarSupportedContent" }
-        },
-        [
-          _c("ul", { staticClass: "navbar-nav ml-auto" }, [
-            _c(
-              "li",
-              { staticClass: "nav-item" },
-              [
-                _c(
-                  "router-link",
-                  {
-                    staticClass: "nav-link",
-                    attrs: { to: { name: "categories" } }
-                  },
-                  [_vm._v("Fakulteti")]
-                )
-              ],
-              1
-            ),
-            _vm._v(" "),
-            _c(
-              "li",
-              { staticClass: "nav-item" },
-              [
-                _c(
-                  "router-link",
-                  {
-                    staticClass: "nav-link",
-                    attrs: { to: { name: "njoftime" } }
-                  },
-                  [_vm._v("Njoftime")]
-                )
-              ],
-              1
-            ),
-            _vm._v(" "),
-            _c(
-              "li",
-              { staticClass: "nav-item" },
-              [
-                _c(
-                  "router-link",
-                  {
-                    staticClass: "nav-link",
-                    attrs: { to: { name: "bachelor" } }
-                  },
-                  [_vm._v("Bachelor")]
-                )
-              ],
-              1
-            ),
-            _vm._v(" "),
-            _c(
-              "li",
-              { staticClass: "nav-item" },
-              [
-                _c(
-                  "router-link",
-                  {
-                    staticClass: "nav-link",
-                    attrs: { to: { name: "master" } }
-                  },
-                  [_vm._v("Master")]
-                )
-              ],
-              1
-            ),
-            _vm._v(" "),
-            _c(
-              "li",
-              { staticClass: "nav-item" },
-              [
-                _c(
-                  "router-link",
-                  {
-                    staticClass: "nav-link",
-                    attrs: { to: { name: "kerkimi-shkencor" } }
-                  },
-                  [_vm._v("Kerkimi Shkencor")]
-                )
-              ],
-              1
-            ),
-            _vm._v(" "),
-            _c("li", { staticClass: "nav-item dropdown" }, [
+    _c(
+      "nav",
+      { staticClass: "navbar navbar-expand-lg navbar-dark bg-dark" },
+      [
+        _vm._m(0),
+        _vm._v(" "),
+        _c(
+          "router-link",
+          { staticClass: "nav-link", attrs: { to: { name: "categories" } } },
+          [
+            _c("img", {
+              staticClass: "image",
+              staticStyle: { height: "100px" },
+              attrs: { src: _vm.baseUrl + "/images/Forumi-Fti.png" }
+            })
+          ]
+        ),
+        _vm._v(" "),
+        _c(
+          "div",
+          {
+            staticClass: "collapse navbar-collapse",
+            attrs: { id: "navbarSupportedContent" }
+          },
+          [
+            _c("ul", { staticClass: "navbar-nav ml-auto" }, [
               _c(
-                "a",
-                {
-                  staticClass: "nav-link dropdown-toggle",
-                  attrs: {
-                    href: "#",
-                    id: "navbarDropdown",
-                    role: "button",
-                    "data-toggle": "dropdown",
-                    "aria-haspopup": "true",
-                    "aria-expanded": "false"
-                  }
-                },
+                "li",
+                { staticClass: "nav-item" },
                 [
-                  _vm.app.user
-                    ? _c("span", [_vm._v(_vm._s(_vm.app.user.name))])
-                    : _c("span", [_vm._v("Llogaria")])
-                ]
+                  _c(
+                    "router-link",
+                    {
+                      staticClass: "nav-link",
+                      attrs: { to: { name: "njoftime" } }
+                    },
+                    [_vm._v("Njoftime")]
+                  )
+                ],
+                1
               ),
               _vm._v(" "),
               _c(
-                "div",
-                {
-                  staticClass: "dropdown-menu",
-                  attrs: { "aria-labelledby": "navbarDropdown" }
-                },
+                "li",
+                { staticClass: "nav-item" },
                 [
-                  !_vm.app.user
-                    ? _c(
-                        "div",
-                        [
-                          _c(
-                            "router-link",
-                            {
-                              staticClass: "dropdown-item",
-                              attrs: { to: { name: "login" } }
-                            },
-                            [_vm._v("Login")]
-                          ),
-                          _vm._v(" "),
-                          _c(
-                            "router-link",
-                            {
-                              staticClass: "dropdown-item",
-                              attrs: { to: { name: "register" } }
-                            },
-                            [_vm._v("Register")]
-                          )
-                        ],
-                        1
-                      )
-                    : _c(
-                        "a",
-                        {
-                          staticClass: "dropdown-item",
-                          attrs: { href: "javascript:void(0)" },
-                          on: { click: _vm.logout }
-                        },
-                        [_vm._v("Logout")]
-                      )
-                ]
-              )
+                  _c(
+                    "router-link",
+                    {
+                      staticClass: "nav-link",
+                      attrs: { to: { name: "bachelor" } }
+                    },
+                    [_vm._v("Bachelor")]
+                  )
+                ],
+                1
+              ),
+              _vm._v(" "),
+              _c(
+                "li",
+                { staticClass: "nav-item" },
+                [
+                  _c(
+                    "router-link",
+                    {
+                      staticClass: "nav-link",
+                      attrs: { to: { name: "master" } }
+                    },
+                    [_vm._v("Master")]
+                  )
+                ],
+                1
+              ),
+              _vm._v(" "),
+              _c(
+                "li",
+                { staticClass: "nav-item" },
+                [
+                  _c(
+                    "router-link",
+                    {
+                      staticClass: "nav-link",
+                      attrs: { to: { name: "kerkimi-shkencor" } }
+                    },
+                    [_vm._v("Kerkimi Shkencor")]
+                  )
+                ],
+                1
+              ),
+              _vm._v(" "),
+              _c("li", { staticClass: "nav-item dropdown" }, [
+                _c(
+                  "a",
+                  {
+                    staticClass: "nav-link dropdown-toggle",
+                    attrs: {
+                      href: "#",
+                      id: "navbarDropdown",
+                      role: "button",
+                      "data-toggle": "dropdown",
+                      "aria-haspopup": "true",
+                      "aria-expanded": "false"
+                    }
+                  },
+                  [
+                    _vm.app.user
+                      ? _c("span", [_vm._v(_vm._s(_vm.app.user.name))])
+                      : _c("span", [_vm._v("Llogaria")])
+                  ]
+                ),
+                _vm._v(" "),
+                _c(
+                  "div",
+                  {
+                    staticClass: "dropdown-menu",
+                    attrs: { "aria-labelledby": "navbarDropdown" }
+                  },
+                  [
+                    !_vm.app.user
+                      ? _c(
+                          "div",
+                          [
+                            _c(
+                              "router-link",
+                              {
+                                staticClass: "dropdown-item",
+                                attrs: { to: { name: "login" } }
+                              },
+                              [_vm._v("Login")]
+                            ),
+                            _vm._v(" "),
+                            _c(
+                              "router-link",
+                              {
+                                staticClass: "dropdown-item",
+                                attrs: { to: { name: "register" } }
+                              },
+                              [_vm._v("Register")]
+                            )
+                          ],
+                          1
+                        )
+                      : _c(
+                          "a",
+                          {
+                            staticClass: "dropdown-item",
+                            attrs: { href: "javascript:void(0)" },
+                            on: { click: _vm.logout }
+                          },
+                          [_vm._v("Logout")]
+                        )
+                  ]
+                )
+              ])
             ])
-          ])
-        ]
-      )
-    ])
+          ]
+        )
+      ],
+      1
+    )
   ])
 }
 var staticRenderFns = [

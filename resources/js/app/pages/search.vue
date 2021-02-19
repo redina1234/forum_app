@@ -62,9 +62,12 @@
                   "
                 >
                   <h4>{{ thread.title }}</h4>
-                  <span>Post by: {{ thread.user.name }}</span>
+                  <span>Postuar nga: {{ thread.user.name }}</span>
                   <br />
-                  <span>Latest reply: {{ thread.latestPost.user.name }}</span>
+                  <span
+                    >Pergjigjet me te fundit:
+                    {{ thread.latestPost.user.name }}</span
+                  >
                 </div>
               </div>
 
@@ -80,7 +83,9 @@
                 >
                   <span style="font-size: 18px">{{ thread.replies }}</span>
                   <br />
-                  <span style="font-size: 14px; color: #606f7b">REPLIES</span>
+                  <span style="font-size: 14px; color: #606f7b"
+                    >Pergjigjet</span
+                  >
                 </div>
               </div>
             </router-link>
@@ -92,7 +97,7 @@
           class="alert alert-info"
           style="margin-bottom: 0"
         >
-          No results.
+          S'ka rezultate.
         </div>
       </div>
     </div>

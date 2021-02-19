@@ -87,7 +87,7 @@
                 type="button"
                 class="btn btn-lg btn-danger"
               >
-                Cancel
+                Anullo
               </button>
             </div>
 
@@ -111,7 +111,7 @@
                   class="btn btn-lg btn-success float-right"
                   style="margin-bottom: 50px"
                 >
-                  Reply
+                  Pergjigju
                 </button>
               </form>
             </div>

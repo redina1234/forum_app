@@ -40,7 +40,7 @@
                   >
                     <span style="line-height: 75px">
                       {{ forum.views }} /
-                      <strong>{{ forum.replies - 1 }}</strong>
+                      <strong>{{ forum.replies }}</strong>
                     </span>
                   </div>
                 </li>
